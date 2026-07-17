@@ -19,10 +19,10 @@
   "author": "",
   "license": "ISC",
   "type": "commonjs",
-  "private": "true",
-  "packageManager": "pnpm@10",
+  "packageManager": "pnpm@11.13.1",
   "devDependencies": {
     "turbo": "^2.10.5",
     "typescript": "^7.0.2"
-  }
+  },
+  "private": true
 }

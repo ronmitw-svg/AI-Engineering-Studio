@@ -7,3 +7,5 @@ coverage
 .idea
 .vscode/settings.json
 temp
+package-lock.json
+*.save
