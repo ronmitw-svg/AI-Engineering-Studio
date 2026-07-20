@@ -3,3 +3,9 @@ packages:
   - "packages/*"
   - "services/*"
   - "plugins/*"
+
+allowBuilds:
+  esbuild: true
+
+onlyBuiltDependencies:
+  - esbuild
