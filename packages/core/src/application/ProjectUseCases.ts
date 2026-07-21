@@ -63,3 +63,34 @@ export class StartWorkOrder {
     await this.projects.save(project);
   }
 }
+
+export class SubmitWorkOrderForReview {
+  constructor(private readonly projects: ProjectRepository) {}
+
+  async execute(input: { projectId: ProjectId; workOrderId: WorkOrderId }): Promise<void> {
+    const { project, workOrder } = await findWorkOrder(this.projects, input);
+    workOrder.submitForReview();
+    await this.projects.save(project);
+  }
+}
+
+export class ApproveWorkOrder {
+  constructor(private readonly projects: ProjectRepository) {}
+
+  async execute(input: { projectId: ProjectId; workOrderId: WorkOrderId }): Promise<void> {
+    const { project, workOrder } = await findWorkOrder(this.projects, input);
+    workOrder.approve();
+    await this.projects.save(project);
+  }
+}
+
+async function findWorkOrder(
+  projects: ProjectRepository,
+  input: { projectId: ProjectId; workOrderId: WorkOrderId },
+): Promise<{ project: Project; workOrder: WorkOrder }> {
+  const project = await projects.findById(input.projectId);
+  if (!project) throw new ProjectNotFoundError(input.projectId.toString());
+  const workOrder = project.findWorkOrder(input.workOrderId);
+  if (!workOrder) throw new WorkOrderNotFoundError(input.workOrderId.toString());
+  return { project, workOrder };
+}
