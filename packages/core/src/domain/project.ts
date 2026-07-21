@@ -1,6 +1,7 @@
 import { AggregateRoot } from "./AggregateRoot.js";
 import { DuplicateRequirementError } from "../errors/DuplicateRequirementError.js";
 import { MissingRequirementError } from "../errors/MissingRequirementError.js";
+import { ValidationError } from "../errors/ValidationError.js";
 import { ProjectId, RequirementId, WorkOrderId } from "../value-objects/Ids.js";
 import { Requirement } from "./Requirement.js";
 import { WorkOrder } from "./WorkOrder.js";
@@ -14,6 +15,14 @@ export class Project extends AggregateRoot<ProjectId> {
     public readonly name: string
   ) {
     super(id);
+  }
+
+  static create(input: { id: ProjectId; name: string }): Project {
+    const name = input.name.trim();
+    if (!name) {
+      throw new ValidationError("A project needs a name.");
+    }
+    return new Project(input.id, name);
   }
 
   addRequirement(requirement: Requirement): void {
@@ -48,5 +57,9 @@ export class Project extends AggregateRoot<ProjectId> {
 
   getWorkOrders(): WorkOrder[] {
     return [...this.workOrders];
+  }
+
+  findWorkOrder(id: WorkOrderId): WorkOrder | undefined {
+    return this.workOrders.find((workOrder) => workOrder.id.equals(id));
   }
 }
