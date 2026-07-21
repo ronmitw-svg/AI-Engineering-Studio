@@ -9,3 +9,5 @@ coverage
 temp
 package-lock.json
 *.save
+.turbo
+*.tsbuildinfo
