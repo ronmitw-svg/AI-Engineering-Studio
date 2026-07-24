@@ -29,6 +29,15 @@ pnpm build
 node packages/cli/dist/index.js doctor --workspace .
 ```
 
+Persisted projects can be created and inspected with:
+
+```sh
+aes init demo "Demo project"
+aes generate requirement demo req-1 "Traceability" "Track work" --source charter
+aes generate work-order demo wo-1 "Implement links" "Connect artefacts" --requirement req-1
+aes traceability demo
+```
+
 See [the architecture decisions](docs/architecture/) and the
 [repository audit](docs/reviews/REPOSITORY-AUDIT-001.md) for the implemented
 foundation and planned milestones.

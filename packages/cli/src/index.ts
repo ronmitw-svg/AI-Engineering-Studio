@@ -113,6 +113,25 @@ program
     console.log(`Project ${projectId} is valid.`);
   });
 
+program
+  .command("traceability <projectId>")
+  .description("Show requirement-to-work-order traceability")
+  .option("--workspace <path>", "Workspace root", process.cwd())
+  .action(async (projectId: string, options: { workspace: string }) => {
+    const project = await repository(options.workspace).findById(new ProjectId(projectId));
+    if (!project) throw new Error(`Project ${projectId} was not found.`);
+    const rows = project.getRequirements().map((requirement) => ({
+      requirementId: requirement.id.value,
+      workOrderIds: project.getWorkOrders()
+        .filter((workOrder) => workOrder.requirementIds.some((id) => id.equals(requirement.id)))
+        .map((workOrder) => workOrder.id.value),
+    }));
+    for (const row of rows) {
+      console.log(`${row.requirementId}: ${row.workOrderIds.join(", ") || "UNLINKED"}`);
+    }
+    if (rows.some((row) => !row.workOrderIds.length)) process.exitCode = 1;
+  });
+
 function repository(workspace: string): FileSystemProjectRepository {
   return new FileSystemProjectRepository(resolve(workspace));
 }
