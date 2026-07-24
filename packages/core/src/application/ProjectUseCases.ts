@@ -64,6 +64,16 @@ export class StartWorkOrder {
   }
 }
 
+export class MarkWorkOrderReady {
+  constructor(private readonly projects: ProjectRepository) {}
+
+  async execute(input: { projectId: ProjectId; workOrderId: WorkOrderId }): Promise<void> {
+    const { project, workOrder } = await findWorkOrder(this.projects, input);
+    workOrder.markReady();
+    await this.projects.save(project);
+  }
+}
+
 export class SubmitWorkOrderForReview {
   constructor(private readonly projects: ProjectRepository) {}
 

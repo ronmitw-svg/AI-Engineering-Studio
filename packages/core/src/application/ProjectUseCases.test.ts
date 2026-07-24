@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ApproveWorkOrder, CreateProject, CreateRequirement, CreateWorkOrder, StartWorkOrder, SubmitWorkOrderForReview } from "./ProjectUseCases.js";
+import { ApproveWorkOrder, CreateProject, CreateRequirement, CreateWorkOrder, MarkWorkOrderReady, StartWorkOrder, SubmitWorkOrderForReview } from "./ProjectUseCases.js";
 import type { Project } from "../domain/project.js";
 import type { ProjectRepository } from "../repositories/ProjectRepository.js";
 import { ProjectId, RequirementId, WorkOrderId } from "../value-objects/Ids.js";
@@ -28,7 +28,7 @@ test("application use cases persist controlled project changes", async () => {
   });
   const start = new StartWorkOrder(repository);
   const stored = await repository.findById(projectId);
-  stored?.findWorkOrder(new WorkOrderId("wo-1"))?.markReady();
+  await new MarkWorkOrderReady(repository).execute({ projectId, workOrderId: new WorkOrderId("wo-1") });
   await start.execute({ projectId, workOrderId: new WorkOrderId("wo-1") });
   await new SubmitWorkOrderForReview(repository).execute({ projectId, workOrderId: new WorkOrderId("wo-1") });
   await new ApproveWorkOrder(repository).execute({ projectId, workOrderId: new WorkOrderId("wo-1") });
