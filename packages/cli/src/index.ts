@@ -4,7 +4,7 @@ import { Command } from "commander";
 import fs from "fs-extra";
 import { resolve } from "node:path";
 import { FileSystemProjectRepository } from "@aes/filesystem";
-import { CreateProject, CreateRequirement, CreateWorkOrder, Priority, ProjectId, RequirementId, RequirementType, WorkOrderId } from "@aes/core";
+import { ApproveWorkOrder, CreateProject, CreateRequirement, CreateWorkOrder, MarkWorkOrderReady, Priority, ProjectId, RequirementId, RequirementType, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
 
 const program = new Command();
 
@@ -67,6 +67,23 @@ generate
       type: RequirementType.Functional, priority, acceptanceCriteria: options.acceptance, source: options.source });
     console.log(`Created requirement ${requirementId}.`);
   });
+
+const workOrder = program.command("work-order").description("Advance a persisted work order through its controlled lifecycle");
+for (const [name, description, UseCase] of [
+  ["ready", "Mark a planned work order ready", MarkWorkOrderReady],
+  ["start", "Start a ready work order", StartWorkOrder],
+  ["submit", "Submit an in-progress work order for review", SubmitWorkOrderForReview],
+  ["approve", "Approve a reviewed work order", ApproveWorkOrder],
+] as const) {
+  workOrder
+    .command(`${name} <projectId> <workOrderId>`)
+    .description(description)
+    .option("--workspace <path>", "Workspace root", process.cwd())
+    .action(async (projectId: string, workOrderId: string, options: { workspace: string }) => {
+      await new UseCase(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), workOrderId: new WorkOrderId(workOrderId) });
+      console.log(`Work order ${workOrderId} moved to ${name}.`);
+    });
+}
 
 generate
   .command("work-order <projectId> <workOrderId> <title> <description>")
