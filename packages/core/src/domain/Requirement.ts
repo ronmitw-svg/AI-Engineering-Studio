@@ -16,6 +16,13 @@ export interface CreateRequirementInput {
   createdAt?: Date;
 }
 
+export interface RequirementSnapshot extends Omit<CreateRequirementInput, "id" | "createdAt"> {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  status: RequirementStatus;
+}
+
 export class Requirement extends AggregateRoot<RequirementId> {
   private status: RequirementStatus;
   public readonly createdAt: Date;
@@ -60,6 +67,19 @@ export class Requirement extends AggregateRoot<RequirementId> {
       source,
       input.createdAt ?? new Date(),
     );
+  }
+
+  static rehydrate(snapshot: RequirementSnapshot): Requirement {
+    const requirement = Requirement.create({ ...snapshot, id: new RequirementId(snapshot.id), createdAt: new Date(snapshot.createdAt) });
+    requirement.status = snapshot.status;
+    requirement.updatedAt = new Date(snapshot.updatedAt);
+    return requirement;
+  }
+
+  toSnapshot(): RequirementSnapshot {
+    return { id: this.id.value, title: this.title, description: this.description, type: this.type, priority: this.priority,
+      acceptanceCriteria: this.acceptanceCriteria, source: this.source, createdAt: this.createdAt.toISOString(),
+      updatedAt: this.updatedAt.toISOString(), status: this.status };
   }
 
   approve(at = new Date()): void {

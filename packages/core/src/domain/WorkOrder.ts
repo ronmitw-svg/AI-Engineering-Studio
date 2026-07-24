@@ -14,6 +14,18 @@ export interface CreateWorkOrderInput {
   assignedAgent?: string;
 }
 
+export interface WorkOrderSnapshot {
+  id: string;
+  title: string;
+  description: string;
+  requirementIds: readonly string[];
+  dependencies: readonly string[];
+  acceptanceCriteria: readonly string[];
+  assignedAgent?: string;
+  status: WorkOrderStatus;
+  blockedFrom?: WorkOrderStatus;
+}
+
 export class WorkOrder extends AggregateRoot<WorkOrderId> {
   private status = WorkOrderStatus.Planned;
   private blockedFrom?: WorkOrderStatus;
@@ -55,6 +67,21 @@ export class WorkOrder extends AggregateRoot<WorkOrderId> {
       input.acceptanceCriteria ?? [],
       input.assignedAgent?.trim() || undefined,
     );
+  }
+
+  static rehydrate(snapshot: WorkOrderSnapshot): WorkOrder {
+    const workOrder = WorkOrder.create({ id: new WorkOrderId(snapshot.id), title: snapshot.title, description: snapshot.description,
+      requirementIds: snapshot.requirementIds.map((id) => new RequirementId(id)), dependencies: snapshot.dependencies.map((id) => new WorkOrderId(id)),
+      acceptanceCriteria: snapshot.acceptanceCriteria, assignedAgent: snapshot.assignedAgent });
+    workOrder.status = snapshot.status;
+    workOrder.blockedFrom = snapshot.blockedFrom;
+    return workOrder;
+  }
+
+  toSnapshot(): WorkOrderSnapshot {
+    return { id: this.id.value, title: this.title, description: this.description, requirementIds: this.requirementIds.map(String),
+      dependencies: this.dependencies.map(String), acceptanceCriteria: this.acceptanceCriteria, assignedAgent: this.assignedAgent,
+      status: this.status, blockedFrom: this.blockedFrom };
   }
 
   start(): void {

@@ -5,6 +5,16 @@ import { ValidationError } from "../errors/ValidationError.js";
 import { ProjectId, RequirementId, WorkOrderId } from "../value-objects/Ids.js";
 import { Requirement } from "./Requirement.js";
 import { WorkOrder } from "./WorkOrder.js";
+import type { CreateWorkOrderInput, WorkOrderSnapshot } from "./WorkOrder.js";
+import type { RequirementSnapshot } from "./Requirement.js";
+
+export interface ProjectSnapshot {
+  schemaVersion: 1;
+  id: string;
+  name: string;
+  requirements: readonly RequirementSnapshot[];
+  workOrders: readonly WorkOrderSnapshot[];
+}
 
 export class Project extends AggregateRoot<ProjectId> {
   private readonly requirements: Requirement[] = [];
@@ -25,6 +35,19 @@ export class Project extends AggregateRoot<ProjectId> {
     return new Project(input.id, name);
   }
 
+  static rehydrate(snapshot: ProjectSnapshot): Project {
+    const project = Project.create({ id: new ProjectId(snapshot.id), name: snapshot.name });
+    for (const requirement of snapshot.requirements) project.addRequirement(Requirement.rehydrate(requirement));
+    for (const workOrder of snapshot.workOrders) project.workOrders.push(WorkOrder.rehydrate(workOrder));
+    return project;
+  }
+
+  toSnapshot(): ProjectSnapshot {
+    return { schemaVersion: 1, id: this.id.value, name: this.name,
+      requirements: this.requirements.map((requirement) => requirement.toSnapshot()),
+      workOrders: this.workOrders.map((workOrder) => workOrder.toSnapshot()) };
+  }
+
   addRequirement(requirement: Requirement): void {
     if (this.requirements.some((existing) => existing.id.equals(requirement.id))) {
       throw new DuplicateRequirementError(requirement.id.toString());
@@ -32,12 +55,7 @@ export class Project extends AggregateRoot<ProjectId> {
     this.requirements.push(requirement);
   }
 
-  createWorkOrder(input: {
-    id: WorkOrderId;
-    title: string;
-    description: string;
-    requirementIds: readonly RequirementId[];
-  }): WorkOrder {
+  createWorkOrder(input: CreateWorkOrderInput): WorkOrder {
     for (const requirementId of input.requirementIds) {
       if (!this.requirements.some((requirement) => requirement.id.equals(requirementId))) {
         throw new MissingRequirementError(requirementId.toString());
