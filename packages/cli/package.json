@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@aes/core": "workspace:*",
+    "@aes/filesystem": "workspace:*",
     "commander": "^14.0.0",
     "kleur": "^4.1.5",
     "fs-extra": "^11.3.2"

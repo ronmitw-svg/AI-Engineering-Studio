@@ -3,6 +3,8 @@
 import { Command } from "commander";
 import fs from "fs-extra";
 import { resolve } from "node:path";
+import { FileSystemProjectRepository } from "@aes/filesystem";
+import { CreateProject, CreateRequirement, CreateWorkOrder, Priority, ProjectId, RequirementId, RequirementType, WorkOrderId } from "@aes/core";
 
 const program = new Command();
 
@@ -40,5 +42,62 @@ program
 
     console.log("Workspace configuration is valid.");
   });
+
+program
+  .command("init <projectId> <name>")
+  .description("Create a persisted engineering project")
+  .option("--workspace <path>", "Workspace root", process.cwd())
+  .action(async (projectId: string, name: string, options: { workspace: string }) => {
+    await new CreateProject(repository(options.workspace)).execute({ id: new ProjectId(projectId), name });
+    console.log(`Created project ${projectId}.`);
+  });
+
+const generate = program.command("generate").description("Create governed engineering artefacts");
+generate
+  .command("requirement <projectId> <requirementId> <title> <description>")
+  .description("Create a functional requirement")
+  .requiredOption("--source <source>", "Requirement source")
+  .option("--priority <priority>", "Critical, High, Medium, or Low", "Medium")
+  .option("--acceptance <criterion...>", "Acceptance criteria", ["Manually verified"])
+  .option("--workspace <path>", "Workspace root", process.cwd())
+  .action(async (projectId: string, requirementId: string, title: string, description: string, options: { source: string; priority: keyof typeof Priority; acceptance: string[]; workspace: string }) => {
+    const priority = Priority[options.priority as keyof typeof Priority];
+    if (!priority) throw new Error(`Unknown priority: ${options.priority}`);
+    await new CreateRequirement(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), id: new RequirementId(requirementId), title, description,
+      type: RequirementType.Functional, priority, acceptanceCriteria: options.acceptance, source: options.source });
+    console.log(`Created requirement ${requirementId}.`);
+  });
+
+generate
+  .command("work-order <projectId> <workOrderId> <title> <description>")
+  .description("Create a work order for one or more requirements")
+  .requiredOption("--requirement <id...>", "Requirement IDs")
+  .option("--workspace <path>", "Workspace root", process.cwd())
+  .action(async (projectId: string, workOrderId: string, title: string, description: string, options: { requirement: string[]; workspace: string }) => {
+    await new CreateWorkOrder(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), id: new WorkOrderId(workOrderId), title, description,
+      requirementIds: options.requirement.map((id) => new RequirementId(id)) });
+    console.log(`Created work order ${workOrderId}.`);
+  });
+
+program
+  .command("validate <projectId>")
+  .description("Check whether each requirement has a work order")
+  .option("--workspace <path>", "Workspace root", process.cwd())
+  .action(async (projectId: string, options: { workspace: string }) => {
+    const project = await repository(options.workspace).findById(new ProjectId(projectId));
+    if (!project) throw new Error(`Project ${projectId} was not found.`);
+    const linked = new Set(project.getWorkOrders().flatMap((workOrder) => workOrder.requirementIds.map(String)));
+    const missing = project.getRequirements().filter((requirement) => !linked.has(requirement.id.value));
+    if (missing.length) {
+      console.error(`Requirements without work order: ${missing.map((requirement) => requirement.id.value).join(", ")}`);
+      process.exitCode = 1;
+      return;
+    }
+    console.log(`Project ${projectId} is valid.`);
+  });
+
+function repository(workspace: string): FileSystemProjectRepository {
+  return new FileSystemProjectRepository(resolve(workspace));
+}
 
 program.parse();
