@@ -4,7 +4,7 @@ import { Command } from "commander";
 import fs from "fs-extra";
 import { resolve } from "node:path";
 import { FileSystemProjectRepository } from "@aes/filesystem";
-import { ApproveWorkOrder, CreateProject, CreateRequirement, CreateWorkOrder, MarkWorkOrderReady, Priority, ProjectId, RequirementId, RequirementType, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
+import { AnalyzeProjectTraceability, ApproveWorkOrder, CreateProject, CreateRequirement, CreateWorkOrder, MarkWorkOrderReady, Priority, ProjectId, RequirementId, RequirementType, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
 
 const program = new Command();
 
@@ -101,12 +101,9 @@ program
   .description("Check whether each requirement has a work order")
   .option("--workspace <path>", "Workspace root", process.cwd())
   .action(async (projectId: string, options: { workspace: string }) => {
-    const project = await repository(options.workspace).findById(new ProjectId(projectId));
-    if (!project) throw new Error(`Project ${projectId} was not found.`);
-    const linked = new Set(project.getWorkOrders().flatMap((workOrder) => workOrder.requirementIds.map(String)));
-    const missing = project.getRequirements().filter((requirement) => !linked.has(requirement.id.value));
-    if (missing.length) {
-      console.error(`Requirements without work order: ${missing.map((requirement) => requirement.id.value).join(", ")}`);
+    const report = await new AnalyzeProjectTraceability(repository(options.workspace)).execute(new ProjectId(projectId));
+    if (!report.isValid) {
+      console.error(`Requirements without work order: ${report.unlinkedRequirementIds.join(", ")}`);
       process.exitCode = 1;
       return;
     }
@@ -118,18 +115,11 @@ program
   .description("Show requirement-to-work-order traceability")
   .option("--workspace <path>", "Workspace root", process.cwd())
   .action(async (projectId: string, options: { workspace: string }) => {
-    const project = await repository(options.workspace).findById(new ProjectId(projectId));
-    if (!project) throw new Error(`Project ${projectId} was not found.`);
-    const rows = project.getRequirements().map((requirement) => ({
-      requirementId: requirement.id.value,
-      workOrderIds: project.getWorkOrders()
-        .filter((workOrder) => workOrder.requirementIds.some((id) => id.equals(requirement.id)))
-        .map((workOrder) => workOrder.id.value),
-    }));
-    for (const row of rows) {
+    const report = await new AnalyzeProjectTraceability(repository(options.workspace)).execute(new ProjectId(projectId));
+    for (const row of report.requirementTraceability) {
       console.log(`${row.requirementId}: ${row.workOrderIds.join(", ") || "UNLINKED"}`);
     }
-    if (rows.some((row) => !row.workOrderIds.length)) process.exitCode = 1;
+    if (!report.isValid) process.exitCode = 1;
   });
 
 function repository(workspace: string): FileSystemProjectRepository {
