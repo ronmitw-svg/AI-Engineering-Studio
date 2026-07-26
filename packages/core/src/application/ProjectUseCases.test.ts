@@ -10,11 +10,12 @@ import type { ProjectRepository } from "../repositories/ProjectRepository.js";
 import { Priority } from "../value-objects/Priority.js";
 import { RequirementType } from "../value-objects/RequirementType.js";
 import { WorkOrderStatus } from "../value-objects/WorkOrderStatus.js";
-import { AnalyzeProjectTraceability } from "./ProjectAnalysis.js";
+import { AnalyzeProjectTraceability, ListProjects } from "./ProjectAnalysis.js";
 
 class InMemoryProjectRepository implements ProjectRepository {
   private readonly projects = new Map<string, Project>();
   async findById(id: ProjectId): Promise<Project | null> { return this.projects.get(id.value) ?? null; }
+  async findAll(): Promise<Project[]> { return [...this.projects.values()]; }
   async save(project: Project): Promise<void> { this.projects.set(project.id.value, project); }
 }
 
@@ -44,6 +45,20 @@ test("application use cases persist controlled project changes", async () => {
   assert.equal(stored?.findWorkOrder(new WorkOrderId("wo-1"))?.statusValue(), WorkOrderStatus.Completed);
   assert.equal(stored?.getReleases()[0]?.version, "0.1.0");
   assert.deepEqual(stored?.getReleases()[0]?.requirementIds.map(String), ["req-1"]);
+});
+
+test("list projects use case summarizes persisted projects", async () => {
+  const repository = new InMemoryProjectRepository();
+  await new CreateProject(repository).execute({ id: new ProjectId("project-a"), name: "Project A" });
+  await new CreateProject(repository).execute({ id: new ProjectId("project-b"), name: "Project B" });
+  await new CreateRequirement(repository).execute({ projectId: new ProjectId("project-a"), id: new RequirementId("req-a"), title: "Coverage", description: "Must be covered.",
+    type: RequirementType.Functional, priority: Priority.Medium, acceptanceCriteria: ["Tracked"], source: "Charter" });
+
+  const summaries = await new ListProjects(repository).execute();
+  assert.equal(summaries.length, 2);
+  assert.deepEqual(summaries.find((summary) => summary.id === "project-a"), {
+    id: "project-a", name: "Project A", requirementCount: 1, workOrderCount: 0, reviewCount: 0, releaseCount: 0,
+  });
 });
 
 test("stakeholder use case persists stakeholder context", async () => {

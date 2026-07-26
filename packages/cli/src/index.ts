@@ -4,7 +4,7 @@ import { Command } from "commander";
 import fs from "fs-extra";
 import { resolve } from "node:path";
 import { FileSystemProjectRepository } from "@aes/filesystem";
-import { AddReviewFinding, AdrId, AnalyzeProjectTraceability, ApproveRelease, ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRelease, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, Priority, ProjectId, RejectRelease, RejectReview, ReleaseId, RequestReviewChanges, RequirementId, RequirementType, ReviewId, StakeholderId, StartReview, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
+import { AddReviewFinding, AdrId, AnalyzeProjectTraceability, ApproveRelease, ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRelease, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, ListProjects, MarkWorkOrderReady, Priority, ProjectId, RejectRelease, RejectReview, ReleaseId, RequestReviewChanges, RequirementId, RequirementType, ReviewId, StakeholderId, StartReview, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
 
 const program = new Command();
 
@@ -41,6 +41,21 @@ program
     }
 
     console.log("Workspace configuration is valid.");
+  });
+
+program
+  .command("list")
+  .description("List projects persisted in the workspace")
+  .option("--workspace <path>", "Workspace root", process.cwd())
+  .action(async (options: { workspace: string }) => {
+    const summaries = await new ListProjects(repository(options.workspace)).execute();
+    if (!summaries.length) {
+      console.log("No projects found.");
+      return;
+    }
+    for (const summary of summaries) {
+      console.log(`${summary.id}: ${summary.name} (requirements=${summary.requirementCount} work-orders=${summary.workOrderCount} reviews=${summary.reviewCount} releases=${summary.releaseCount})`);
+    }
   });
 
 program

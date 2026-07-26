@@ -25,3 +25,19 @@ test("filesystem repository round-trips the project state", async () => {
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("findAll lists persisted projects and tolerates a missing directory", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "aes-filesystem-"));
+  try {
+    const repository = new FileSystemProjectRepository(directory);
+    assert.deepEqual(await repository.findAll(), []);
+
+    await repository.save(Project.create({ id: new ProjectId("project-a"), name: "Project A" }));
+    await repository.save(Project.create({ id: new ProjectId("project-b"), name: "Project B" }));
+
+    const all = await repository.findAll();
+    assert.deepEqual(all.map((project) => project.name).sort(), ["Project A", "Project B"]);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});

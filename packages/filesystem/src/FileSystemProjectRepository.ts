@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Project, ProjectId, type ProjectRepository, type ProjectSnapshot } from "@aes/core";
 
@@ -13,6 +13,23 @@ export class FileSystemProjectRepository implements ProjectRepository {
       if (isNotFound(error)) return null;
       throw error;
     }
+  }
+
+  async findAll(): Promise<Project[]> {
+    let entries: string[];
+    try {
+      entries = await readdir(this.projectsDirectory());
+    } catch (error: unknown) {
+      if (isNotFound(error)) return [];
+      throw error;
+    }
+
+    const projects = await Promise.all(
+      entries
+        .filter((entry) => entry.endsWith(".json") && !entry.endsWith(".json.tmp"))
+        .map((entry) => this.findById(new ProjectId(entry.slice(0, -".json".length)))),
+    );
+    return projects.filter((project): project is Project => project !== null);
   }
 
   async save(project: Project): Promise<void> {

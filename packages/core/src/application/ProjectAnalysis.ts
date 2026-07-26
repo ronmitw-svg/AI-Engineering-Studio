@@ -3,6 +3,31 @@ import type { ProjectId } from "../value-objects/Ids.js";
 import { ProjectNotFoundError } from "./ProjectNotFoundError.js";
 import { ReviewStatus } from "../domain/Review.js";
 
+export interface ProjectSummary {
+  readonly id: string;
+  readonly name: string;
+  readonly requirementCount: number;
+  readonly workOrderCount: number;
+  readonly reviewCount: number;
+  readonly releaseCount: number;
+}
+
+export class ListProjects {
+  constructor(private readonly projects: ProjectRepository) {}
+
+  async execute(): Promise<ProjectSummary[]> {
+    const projects = await this.projects.findAll();
+    return projects.map((project) => ({
+      id: project.id.value,
+      name: project.name,
+      requirementCount: project.getRequirements().length,
+      workOrderCount: project.getWorkOrders().length,
+      reviewCount: project.getReviews().length,
+      releaseCount: project.getReleases().length,
+    }));
+  }
+}
+
 export interface RequirementTraceability {
   readonly requirementId: string;
   readonly workOrderIds: readonly string[];
