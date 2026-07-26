@@ -43,6 +43,7 @@ test("application use cases persist controlled project changes", async () => {
 
   assert.equal(stored?.findWorkOrder(new WorkOrderId("wo-1"))?.statusValue(), WorkOrderStatus.Completed);
   assert.equal(stored?.getReleases()[0]?.version, "0.1.0");
+  assert.deepEqual(stored?.getReleases()[0]?.requirementIds.map(String), ["req-1"]);
 });
 
 test("stakeholder use case persists stakeholder context", async () => {

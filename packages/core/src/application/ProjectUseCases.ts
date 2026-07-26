@@ -105,7 +105,7 @@ export class CreateRelease {
     if (project.getRequirements().some((requirement) => !linked.has(requirement.id.value)) || project.getWorkOrders().some((workOrder) => workOrder.statusValue() !== WorkOrderStatus.Completed)) {
       throw new ReleaseNotReadyError(input.projectId.toString());
     }
-    const release = Release.create(input);
+    const release = Release.create({ ...input, requirementIds: project.getRequirements().map((requirement) => requirement.id) });
     project.addRelease(release);
     await this.projects.save(project);
     return release;
