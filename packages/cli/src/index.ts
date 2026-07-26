@@ -4,7 +4,7 @@ import { Command } from "commander";
 import fs from "fs-extra";
 import { resolve } from "node:path";
 import { FileSystemProjectRepository } from "@aes/filesystem";
-import { AdrId, AnalyzeProjectTraceability, ApproveWorkOrder, CreateAdr, CreateProject, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, Priority, ProjectId, RequirementId, RequirementType, ReviewId, StakeholderId, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
+import { AdrId, AnalyzeProjectTraceability, ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, Priority, ProjectId, RequirementId, RequirementType, ReviewId, StakeholderId, StartReview, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
 
 const program = new Command();
 
@@ -82,6 +82,15 @@ for (const [name, description, UseCase] of [
     .action(async (projectId: string, workOrderId: string, options: { workspace: string }) => {
       await new UseCase(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), workOrderId: new WorkOrderId(workOrderId) });
       console.log(`Work order ${workOrderId} moved to ${name}.`);
+    });
+}
+
+const review = program.command("review").description("Advance an independent review");
+for (const [name, UseCase] of [["start", StartReview], ["approve", ApproveReview]] as const) {
+  review.command(`${name} <projectId> <reviewId>`).option("--workspace <path>", "Workspace root", process.cwd())
+    .action(async (projectId: string, reviewId: string, options: { workspace: string }) => {
+      await new UseCase(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), reviewId: new ReviewId(reviewId) });
+      console.log(`Review ${reviewId} moved to ${name}.`);
     });
 }
 
