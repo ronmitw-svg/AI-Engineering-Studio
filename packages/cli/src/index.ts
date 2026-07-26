@@ -4,7 +4,7 @@ import { Command } from "commander";
 import fs from "fs-extra";
 import { resolve } from "node:path";
 import { FileSystemProjectRepository } from "@aes/filesystem";
-import { AdrId, AnalyzeProjectTraceability, ApproveWorkOrder, CreateAdr, CreateProject, CreateRequirement, CreateWorkOrder, MarkWorkOrderReady, Priority, ProjectId, RequirementId, RequirementType, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
+import { AdrId, AnalyzeProjectTraceability, ApproveWorkOrder, CreateAdr, CreateProject, CreateRequirement, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, Priority, ProjectId, RequirementId, RequirementType, StakeholderId, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
 
 const program = new Command();
 
@@ -107,6 +107,21 @@ generate
     await new CreateAdr(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), id: new AdrId(adrId), title,
       context: options.context, decision: options.decision, consequences: options.consequences });
     console.log(`Created ADR ${adrId}.`);
+  });
+
+generate
+  .command("stakeholder <projectId> <stakeholderId> <name>")
+  .description("Create a project stakeholder")
+  .requiredOption("--role <role>", "Stakeholder role")
+  .requiredOption("--interest <interest>", "Stakeholder interest")
+  .option("--influence <influence>", "Low, Medium, or High", "Medium")
+  .option("--notes <notes>", "Optional notes")
+  .option("--workspace <path>", "Workspace root", process.cwd())
+  .action(async (projectId: string, stakeholderId: string, name: string, options: { role: string; interest: string; influence: "Low" | "Medium" | "High"; notes?: string; workspace: string }) => {
+    if (!["Low", "Medium", "High"].includes(options.influence)) throw new Error(`Unknown influence: ${options.influence}`);
+    await new CreateStakeholder(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), id: new StakeholderId(stakeholderId), name,
+      role: options.role, interest: options.interest, influence: options.influence, notes: options.notes });
+    console.log(`Created stakeholder ${stakeholderId}.`);
   });
 
 program
