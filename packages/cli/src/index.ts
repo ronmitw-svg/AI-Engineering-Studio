@@ -4,7 +4,7 @@ import { Command } from "commander";
 import fs from "fs-extra";
 import { resolve } from "node:path";
 import { FileSystemProjectRepository } from "@aes/filesystem";
-import { AdrId, AnalyzeProjectTraceability, ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, Priority, ProjectId, RequirementId, RequirementType, ReviewId, StakeholderId, StartReview, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
+import { AdrId, AnalyzeProjectTraceability, ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRelease, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, Priority, ProjectId, ReleaseId, RequirementId, RequirementType, ReviewId, StakeholderId, StartReview, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
 
 const program = new Command();
 
@@ -168,6 +168,15 @@ program
       console.log(`${row.requirementId}: ${row.workOrderIds.join(", ") || "UNLINKED"}`);
     }
     if (!report.isValid) process.exitCode = 1;
+  });
+
+program
+  .command("release <projectId> <releaseId> <version>")
+  .description("Create a release after all quality gates are satisfied")
+  .option("--workspace <path>", "Workspace root", process.cwd())
+  .action(async (projectId: string, releaseId: string, version: string, options: { workspace: string }) => {
+    await new CreateRelease(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), id: new ReleaseId(releaseId), version });
+    console.log(`Created release ${version}.`);
   });
 
 function repository(workspace: string): FileSystemProjectRepository {
