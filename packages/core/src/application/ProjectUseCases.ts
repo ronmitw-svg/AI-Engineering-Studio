@@ -145,6 +145,9 @@ export class RequestReviewChanges {
   async execute(input: { projectId: ProjectId; reviewId: ReviewId }): Promise<void> {
     const { project, review } = await findReview(this.projects, input);
     review.requestChanges();
+    const workOrder = project.findWorkOrder(review.target);
+    if (!workOrder) throw new WorkOrderNotFoundError(review.target.toString());
+    workOrder.returnToInProgress();
     await this.projects.save(project);
   }
 }

@@ -92,6 +92,10 @@ export class WorkOrder extends AggregateRoot<WorkOrderId> {
     this.transition(WorkOrderStatus.InProgress, WorkOrderStatus.Review);
   }
 
+  returnToInProgress(): void {
+    this.transition(WorkOrderStatus.Review, WorkOrderStatus.InProgress);
+  }
+
   approve(): void {
     this.transition(WorkOrderStatus.Review, WorkOrderStatus.Completed);
   }

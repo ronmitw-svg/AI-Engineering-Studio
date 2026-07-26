@@ -46,3 +46,13 @@ test("a blocked work order resumes to its prior active state", () => {
   workOrder.resume();
   assert.equal(workOrder.statusValue(), WorkOrderStatus.InProgress);
 });
+
+test("a reviewed work order can return to implementation for requested changes", () => {
+  const workOrder = createWorkOrder();
+  workOrder.markReady();
+  workOrder.start();
+  workOrder.submitForReview();
+  workOrder.returnToInProgress();
+
+  assert.equal(workOrder.statusValue(), WorkOrderStatus.InProgress);
+});
