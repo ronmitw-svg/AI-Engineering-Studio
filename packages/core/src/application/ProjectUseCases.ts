@@ -152,6 +152,18 @@ export class RequestReviewChanges {
   }
 }
 
+export class RejectReview {
+  constructor(private readonly projects: ProjectRepository) {}
+  async execute(input: { projectId: ProjectId; reviewId: ReviewId }): Promise<void> {
+    const { project, review } = await findReview(this.projects, input);
+    review.reject();
+    const workOrder = project.findWorkOrder(review.target);
+    if (!workOrder) throw new WorkOrderNotFoundError(review.target.toString());
+    workOrder.block();
+    await this.projects.save(project);
+  }
+}
+
 export class StartWorkOrder {
   constructor(private readonly projects: ProjectRepository) {}
 

@@ -4,7 +4,7 @@ import { Command } from "commander";
 import fs from "fs-extra";
 import { resolve } from "node:path";
 import { FileSystemProjectRepository } from "@aes/filesystem";
-import { AddReviewFinding, AdrId, AnalyzeProjectTraceability, ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRelease, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, Priority, ProjectId, ReleaseId, RequestReviewChanges, RequirementId, RequirementType, ReviewId, StakeholderId, StartReview, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
+import { AddReviewFinding, AdrId, AnalyzeProjectTraceability, ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRelease, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, Priority, ProjectId, RejectReview, ReleaseId, RequestReviewChanges, RequirementId, RequirementType, ReviewId, StakeholderId, StartReview, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
 
 const program = new Command();
 
@@ -102,6 +102,11 @@ review.command("request-changes <projectId> <reviewId>").option("--workspace <pa
   .action(async (projectId: string, reviewId: string, options: { workspace: string }) => {
     await new RequestReviewChanges(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), reviewId: new ReviewId(reviewId) });
     console.log(`Review ${reviewId} requested changes.`);
+  });
+review.command("reject <projectId> <reviewId>").option("--workspace <path>", "Workspace root", process.cwd())
+  .action(async (projectId: string, reviewId: string, options: { workspace: string }) => {
+    await new RejectReview(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), reviewId: new ReviewId(reviewId) });
+    console.log(`Review ${reviewId} rejected; work order blocked pending a decision.`);
   });
 
 generate

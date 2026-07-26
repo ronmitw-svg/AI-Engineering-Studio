@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { AddReviewFinding, ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRelease, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, RequestReviewChanges, StartReview, StartWorkOrder, SubmitWorkOrderForReview } from "./ProjectUseCases.js";
+import { AddReviewFinding, ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRelease, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, RejectReview, RequestReviewChanges, StartReview, StartWorkOrder, SubmitWorkOrderForReview } from "./ProjectUseCases.js";
 import { ReviewStatus } from "../domain/Review.js";
 import { AdrId, ProjectId, ReleaseId, RequirementId, ReviewId, StakeholderId, WorkOrderId } from "../value-objects/Ids.js";
 import { ReleaseNotReadyError } from "./ReleaseNotReadyError.js";
@@ -94,6 +94,24 @@ test("review use cases persist findings and requested changes", async () => {
   assert.deepEqual(review?.findingsValue(), ["Add a regression test"]);
   assert.equal(review?.statusValue(), ReviewStatus.ChangesRequested);
   assert.equal((await repository.findById(projectId))?.findWorkOrder(new WorkOrderId("wo-changes"))?.statusValue(), WorkOrderStatus.InProgress);
+});
+
+test("rejecting a review blocks its work order pending a decision", async () => {
+  const repository = new InMemoryProjectRepository();
+  const projectId = new ProjectId("project-review-rejected");
+  await new CreateProject(repository).execute({ id: projectId, name: "Review rejected" });
+  await new CreateRequirement(repository).execute({ projectId, id: new RequirementId("req-rejected"), title: "Review", description: "Review work.",
+    type: RequirementType.Functional, priority: Priority.Medium, acceptanceCriteria: ["Review exists"], source: "Charter" });
+  await new CreateWorkOrder(repository).execute({ projectId, id: new WorkOrderId("wo-rejected"), title: "Implement", description: "Implement review.", requirementIds: [new RequirementId("req-rejected")] });
+  await new MarkWorkOrderReady(repository).execute({ projectId, workOrderId: new WorkOrderId("wo-rejected") });
+  await new StartWorkOrder(repository).execute({ projectId, workOrderId: new WorkOrderId("wo-rejected") });
+  await new SubmitWorkOrderForReview(repository).execute({ projectId, workOrderId: new WorkOrderId("wo-rejected") });
+  await new CreateReview(repository).execute({ projectId, id: new ReviewId("review-rejected"), target: new WorkOrderId("wo-rejected"), reviewer: "review-agent" });
+  await new StartReview(repository).execute({ projectId, reviewId: new ReviewId("review-rejected") });
+  await new RejectReview(repository).execute({ projectId, reviewId: new ReviewId("review-rejected") });
+  const review = (await repository.findById(projectId))?.findReview(new ReviewId("review-rejected"));
+  assert.equal(review?.statusValue(), ReviewStatus.Rejected);
+  assert.equal((await repository.findById(projectId))?.findWorkOrder(new WorkOrderId("wo-rejected"))?.statusValue(), WorkOrderStatus.Blocked);
 });
 
 test("ADR use case persists an architectural decision", async () => {
