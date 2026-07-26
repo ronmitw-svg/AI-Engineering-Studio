@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ApproveWorkOrder, CreateProject, CreateRequirement, CreateWorkOrder, MarkWorkOrderReady, StartWorkOrder, SubmitWorkOrderForReview } from "./ProjectUseCases.js";
+import { ApproveWorkOrder, CreateAdr, CreateProject, CreateRequirement, CreateWorkOrder, MarkWorkOrderReady, StartWorkOrder, SubmitWorkOrderForReview } from "./ProjectUseCases.js";
+import { AdrId } from "../value-objects/Ids.js";
 import type { Project } from "../domain/project.js";
 import type { ProjectRepository } from "../repositories/ProjectRepository.js";
 import { ProjectId, RequirementId, WorkOrderId } from "../value-objects/Ids.js";
@@ -35,6 +36,15 @@ test("application use cases persist controlled project changes", async () => {
   await new ApproveWorkOrder(repository).execute({ projectId, workOrderId: new WorkOrderId("wo-1") });
 
   assert.equal(stored?.findWorkOrder(new WorkOrderId("wo-1"))?.statusValue(), WorkOrderStatus.Completed);
+});
+
+test("ADR use case persists an architectural decision", async () => {
+  const repository = new InMemoryProjectRepository();
+  const projectId = new ProjectId("project-adr");
+  await new CreateProject(repository).execute({ id: projectId, name: "ADR project" });
+  await new CreateAdr(repository).execute({ projectId, id: new AdrId("adr-1"), title: "Use core", context: "Rules need boundaries.",
+    decision: "Use a core package.", consequences: "Adapters depend on core." });
+  assert.equal((await repository.findById(projectId))?.getAdrs().length, 1);
 });
 
 test("traceability analysis identifies unlinked requirements", async () => {

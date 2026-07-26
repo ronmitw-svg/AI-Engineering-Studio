@@ -20,6 +20,17 @@ export interface CreateAdrInput {
   createdAt?: Date;
 }
 
+export interface AdrSnapshot {
+  id: string;
+  title: string;
+  context: string;
+  decision: string;
+  consequences: string;
+  status: AdrStatus;
+  createdAt: string;
+  supersededBy?: string;
+}
+
 export class ArchitectureDecisionRecord extends AggregateRoot<AdrId> {
   private status = AdrStatus.Proposed;
   public readonly createdAt: Date;
@@ -43,6 +54,19 @@ export class ArchitectureDecisionRecord extends AggregateRoot<AdrId> {
       throw new ValidationError("An ADR needs a title, context, decision, and consequences.");
     }
     return new ArchitectureDecisionRecord(input.id, fields[0], fields[1], fields[2], fields[3], input.createdAt ?? new Date());
+  }
+
+  static rehydrate(snapshot: AdrSnapshot): ArchitectureDecisionRecord {
+    const adr = ArchitectureDecisionRecord.create({ id: new AdrId(snapshot.id), title: snapshot.title, context: snapshot.context,
+      decision: snapshot.decision, consequences: snapshot.consequences, createdAt: new Date(snapshot.createdAt) });
+    adr.status = snapshot.status;
+    adr.supersededBy = snapshot.supersededBy ? new AdrId(snapshot.supersededBy) : undefined;
+    return adr;
+  }
+
+  toSnapshot(): AdrSnapshot {
+    return { id: this.id.value, title: this.title, context: this.context, decision: this.decision, consequences: this.consequences,
+      status: this.status, createdAt: this.createdAt.toISOString(), supersededBy: this.supersededBy?.value };
   }
 
   accept(): void {

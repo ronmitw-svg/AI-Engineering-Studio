@@ -4,6 +4,7 @@ import { type CreateWorkOrderInput, WorkOrder } from "../domain/WorkOrder.js";
 import { ProjectRepository } from "../repositories/ProjectRepository.js";
 import { ProjectId, WorkOrderId } from "../value-objects/Ids.js";
 import { ProjectNotFoundError } from "./ProjectNotFoundError.js";
+import { ArchitectureDecisionRecord, type CreateAdrInput } from "../domain/ArchitectureDecisionRecord.js";
 import { WorkOrderNotFoundError } from "./WorkOrderNotFoundError.js";
 
 export class CreateProject {
@@ -48,6 +49,19 @@ export class CreateWorkOrder {
     const project = await this.projects.findById(id);
     if (!project) throw new ProjectNotFoundError(id.toString());
     return project;
+  }
+}
+
+export class CreateAdr {
+  constructor(private readonly projects: ProjectRepository) {}
+
+  async execute(input: CreateAdrInput & { projectId: ProjectId }): Promise<ArchitectureDecisionRecord> {
+    const project = await this.projects.findById(input.projectId);
+    if (!project) throw new ProjectNotFoundError(input.projectId.toString());
+    const adr = ArchitectureDecisionRecord.create(input);
+    project.addAdr(adr);
+    await this.projects.save(project);
+    return adr;
   }
 }
 

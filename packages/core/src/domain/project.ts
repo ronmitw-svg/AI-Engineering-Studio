@@ -7,6 +7,7 @@ import { Requirement } from "./Requirement.js";
 import { WorkOrder } from "./WorkOrder.js";
 import type { CreateWorkOrderInput, WorkOrderSnapshot } from "./WorkOrder.js";
 import type { RequirementSnapshot } from "./Requirement.js";
+import { ArchitectureDecisionRecord, type AdrSnapshot } from "./ArchitectureDecisionRecord.js";
 
 export interface ProjectSnapshot {
   schemaVersion: 1;
@@ -14,11 +15,13 @@ export interface ProjectSnapshot {
   name: string;
   requirements: readonly RequirementSnapshot[];
   workOrders: readonly WorkOrderSnapshot[];
+  adrs: readonly AdrSnapshot[];
 }
 
 export class Project extends AggregateRoot<ProjectId> {
   private readonly requirements: Requirement[] = [];
   private readonly workOrders: WorkOrder[] = [];
+  private readonly adrs: ArchitectureDecisionRecord[] = [];
 
   constructor(
     id: ProjectId,
@@ -39,14 +42,18 @@ export class Project extends AggregateRoot<ProjectId> {
     const project = Project.create({ id: new ProjectId(snapshot.id), name: snapshot.name });
     for (const requirement of snapshot.requirements) project.addRequirement(Requirement.rehydrate(requirement));
     for (const workOrder of snapshot.workOrders) project.workOrders.push(WorkOrder.rehydrate(workOrder));
+    for (const adr of snapshot.adrs ?? []) project.adrs.push(ArchitectureDecisionRecord.rehydrate(adr));
     return project;
   }
 
   toSnapshot(): ProjectSnapshot {
     return { schemaVersion: 1, id: this.id.value, name: this.name,
       requirements: this.requirements.map((requirement) => requirement.toSnapshot()),
-      workOrders: this.workOrders.map((workOrder) => workOrder.toSnapshot()) };
+      workOrders: this.workOrders.map((workOrder) => workOrder.toSnapshot()), adrs: this.adrs.map((adr) => adr.toSnapshot()) };
   }
+
+  addAdr(adr: ArchitectureDecisionRecord): void { this.adrs.push(adr); }
+  getAdrs(): ArchitectureDecisionRecord[] { return [...this.adrs]; }
 
   addRequirement(requirement: Requirement): void {
     if (this.requirements.some((existing) => existing.id.equals(requirement.id))) {
