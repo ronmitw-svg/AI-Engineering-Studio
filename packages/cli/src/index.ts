@@ -4,7 +4,7 @@ import { Command } from "commander";
 import fs from "fs-extra";
 import { resolve } from "node:path";
 import { FileSystemProjectRepository } from "@aes/filesystem";
-import { AdrId, AnalyzeProjectTraceability, ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRelease, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, Priority, ProjectId, ReleaseId, RequirementId, RequirementType, ReviewId, StakeholderId, StartReview, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
+import { AddReviewFinding, AdrId, AnalyzeProjectTraceability, ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRelease, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, Priority, ProjectId, ReleaseId, RequestReviewChanges, RequirementId, RequirementType, ReviewId, StakeholderId, StartReview, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
 
 const program = new Command();
 
@@ -93,6 +93,16 @@ for (const [name, UseCase] of [["start", StartReview], ["approve", ApproveReview
       console.log(`Review ${reviewId} moved to ${name}.`);
     });
 }
+review.command("finding <projectId> <reviewId> <finding>").option("--workspace <path>", "Workspace root", process.cwd())
+  .action(async (projectId: string, reviewId: string, finding: string, options: { workspace: string }) => {
+    await new AddReviewFinding(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), reviewId: new ReviewId(reviewId), finding });
+    console.log(`Added finding to review ${reviewId}.`);
+  });
+review.command("request-changes <projectId> <reviewId>").option("--workspace <path>", "Workspace root", process.cwd())
+  .action(async (projectId: string, reviewId: string, options: { workspace: string }) => {
+    await new RequestReviewChanges(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), reviewId: new ReviewId(reviewId) });
+    console.log(`Review ${reviewId} requested changes.`);
+  });
 
 generate
   .command("work-order <projectId> <workOrderId> <title> <description>")
