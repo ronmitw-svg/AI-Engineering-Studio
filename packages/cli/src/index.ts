@@ -4,7 +4,7 @@ import { Command } from "commander";
 import fs from "fs-extra";
 import { resolve } from "node:path";
 import { FileSystemProjectRepository } from "@aes/filesystem";
-import { AdrId, AnalyzeProjectTraceability, ApproveWorkOrder, CreateAdr, CreateProject, CreateRequirement, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, Priority, ProjectId, RequirementId, RequirementType, StakeholderId, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
+import { AdrId, AnalyzeProjectTraceability, ApproveWorkOrder, CreateAdr, CreateProject, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, Priority, ProjectId, RequirementId, RequirementType, ReviewId, StakeholderId, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
 
 const program = new Command();
 
@@ -122,6 +122,17 @@ generate
     await new CreateStakeholder(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), id: new StakeholderId(stakeholderId), name,
       role: options.role, interest: options.interest, influence: options.influence, notes: options.notes });
     console.log(`Created stakeholder ${stakeholderId}.`);
+  });
+
+generate
+  .command("review <projectId> <reviewId> <workOrderId>")
+  .description("Create an independent review for a work order")
+  .requiredOption("--reviewer <reviewer>", "Reviewer identity")
+  .option("--workspace <path>", "Workspace root", process.cwd())
+  .action(async (projectId: string, reviewId: string, workOrderId: string, options: { reviewer: string; workspace: string }) => {
+    await new CreateReview(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), id: new ReviewId(reviewId),
+      target: new WorkOrderId(workOrderId), reviewer: options.reviewer });
+    console.log(`Created review ${reviewId}.`);
   });
 
 program
