@@ -166,6 +166,8 @@ program
   .option("--workspace <path>", "Workspace root", process.cwd())
   .action(async (projectId: string, options: { workspace: string }) => {
     const report = await new AnalyzeProjectTraceability(repository(options.workspace)).execute(new ProjectId(projectId));
+    if (report.requirementsMissingAdr.length) console.warn(`Requirements without an ADR: ${report.requirementsMissingAdr.join(", ")}`);
+    if (report.requirementsMissingApprovedReview.length) console.warn(`Requirements without an approved review: ${report.requirementsMissingApprovedReview.join(", ")}`);
     if (!report.isValid) {
       console.error(`Requirements without work order: ${report.unlinkedRequirementIds.join(", ")}`);
       process.exitCode = 1;
@@ -176,12 +178,12 @@ program
 
 program
   .command("traceability <projectId>")
-  .description("Show requirement-to-work-order traceability")
+  .description("Show requirement traceability: work orders, ADRs, reviews, and releases")
   .option("--workspace <path>", "Workspace root", process.cwd())
   .action(async (projectId: string, options: { workspace: string }) => {
     const report = await new AnalyzeProjectTraceability(repository(options.workspace)).execute(new ProjectId(projectId));
     for (const row of report.requirementTraceability) {
-      console.log(`${row.requirementId}: ${row.workOrderIds.join(", ") || "UNLINKED"}`);
+      console.log(`${row.requirementId}: work-orders=${row.workOrderIds.join(",") || "UNLINKED"} adrs=${row.adrIds.join(",") || "NONE"} reviewed=${row.reviewedWorkOrderIds.join(",") || "NONE"} releases=${row.releaseIds.join(",") || "NONE"}`);
     }
     if (!report.isValid) process.exitCode = 1;
   });

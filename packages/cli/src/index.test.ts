@@ -30,7 +30,10 @@ test("CLI persists a governed work-order workflow end to end", async () => {
     assert.match(await run(workspace, "release", "demo", "release-1", "0.1.0"), /Created release/);
 
     assert.match(await run(workspace, "validate", "demo"), /valid/);
-    assert.match(await run(workspace, "traceability", "demo"), /req-1: wo-1/);
+    assert.match(
+      await run(workspace, "traceability", "demo"),
+      /req-1: work-orders=wo-1 adrs=NONE reviewed=wo-1 releases=release-1/,
+    );
   } finally {
     await rm(workspace, { recursive: true, force: true });
   }

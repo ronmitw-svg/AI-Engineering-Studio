@@ -150,3 +150,41 @@ test("traceability analysis identifies unlinked requirements", async () => {
   assert.deepEqual(report.unlinkedRequirementIds, ["req-unlinked"]);
   assert.equal(report.isValid, false);
 });
+
+test("traceability analysis reports the full ADR/review/release chain", async () => {
+  const repository = new InMemoryProjectRepository();
+  const projectId = new ProjectId("project-chain");
+  await new CreateProject(repository).execute({ id: projectId, name: "Chain" });
+  await new CreateRequirement(repository).execute({ projectId, id: new RequirementId("req-chain"), title: "Chain", description: "Chain work.",
+    type: RequirementType.Functional, priority: Priority.Medium, acceptanceCriteria: ["Traced end to end"], source: "Charter" });
+
+  const beforeAdrAndReview = await new AnalyzeProjectTraceability(repository).execute(projectId);
+  assert.deepEqual(beforeAdrAndReview.requirementsMissingAdr, ["req-chain"]);
+
+  await new CreateAdr(repository).execute({ projectId, id: new AdrId("adr-chain"), title: "Use core", context: "Rules need boundaries.",
+    decision: "Use a core package.", consequences: "Adapters depend on core.", requirementIds: [new RequirementId("req-chain")] });
+  await new CreateWorkOrder(repository).execute({ projectId, id: new WorkOrderId("wo-chain"), title: "Implement", description: "Implement chain.", requirementIds: [new RequirementId("req-chain")] });
+
+  const beforeReview = await new AnalyzeProjectTraceability(repository).execute(projectId);
+  assert.deepEqual(beforeReview.requirementsMissingAdr, []);
+  assert.deepEqual(beforeReview.requirementsMissingApprovedReview, ["req-chain"]);
+  assert.equal(beforeReview.isValid, true);
+
+  await new MarkWorkOrderReady(repository).execute({ projectId, workOrderId: new WorkOrderId("wo-chain") });
+  await new StartWorkOrder(repository).execute({ projectId, workOrderId: new WorkOrderId("wo-chain") });
+  await new SubmitWorkOrderForReview(repository).execute({ projectId, workOrderId: new WorkOrderId("wo-chain") });
+  await new CreateReview(repository).execute({ projectId, id: new ReviewId("review-chain"), target: new WorkOrderId("wo-chain"), reviewer: "reviewer" });
+  await new StartReview(repository).execute({ projectId, reviewId: new ReviewId("review-chain") });
+  await new ApproveReview(repository).execute({ projectId, reviewId: new ReviewId("review-chain") });
+  await new ApproveWorkOrder(repository).execute({ projectId, workOrderId: new WorkOrderId("wo-chain") });
+  await new CreateRelease(repository).execute({ projectId, id: new ReleaseId("release-chain"), version: "0.1.0" });
+
+  const report = await new AnalyzeProjectTraceability(repository).execute(projectId);
+  const [entry] = report.requirementTraceability;
+  assert.deepEqual(entry?.adrIds, ["adr-chain"]);
+  assert.deepEqual(entry?.workOrderIds, ["wo-chain"]);
+  assert.deepEqual(entry?.reviewedWorkOrderIds, ["wo-chain"]);
+  assert.deepEqual(entry?.releaseIds, ["release-chain"]);
+  assert.deepEqual(report.requirementsMissingAdr, []);
+  assert.deepEqual(report.requirementsMissingApprovedReview, []);
+});
