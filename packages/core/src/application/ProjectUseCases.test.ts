@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRelease, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, StartReview, StartWorkOrder, SubmitWorkOrderForReview } from "./ProjectUseCases.js";
+import { AddReviewFinding, ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRelease, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, RequestReviewChanges, StartReview, StartWorkOrder, SubmitWorkOrderForReview } from "./ProjectUseCases.js";
+import { ReviewStatus } from "../domain/Review.js";
 import { AdrId, ReviewId, StakeholderId } from "../value-objects/Ids.js";
 import { ReleaseId } from "../domain/Release.js";
 import { ReleaseNotReadyError } from "./ReleaseNotReadyError.js";
@@ -75,6 +76,22 @@ test("review use case links an independent reviewer to a work order", async () =
   await new CreateWorkOrder(repository).execute({ projectId, id: new WorkOrderId("wo-review"), title: "Implement", description: "Implement review.", requirementIds: [new RequirementId("req-review")] });
   await new CreateReview(repository).execute({ projectId, id: new ReviewId("review-1"), target: new WorkOrderId("wo-review"), reviewer: "review-agent" });
   assert.equal((await repository.findById(projectId))?.getReviews()[0]?.reviewer, "review-agent");
+});
+
+test("review use cases persist findings and requested changes", async () => {
+  const repository = new InMemoryProjectRepository();
+  const projectId = new ProjectId("project-review-changes");
+  await new CreateProject(repository).execute({ id: projectId, name: "Review changes" });
+  await new CreateRequirement(repository).execute({ projectId, id: new RequirementId("req-changes"), title: "Review", description: "Review work.",
+    type: RequirementType.Functional, priority: Priority.Medium, acceptanceCriteria: ["Review exists"], source: "Charter" });
+  await new CreateWorkOrder(repository).execute({ projectId, id: new WorkOrderId("wo-changes"), title: "Implement", description: "Implement review.", requirementIds: [new RequirementId("req-changes")] });
+  await new CreateReview(repository).execute({ projectId, id: new ReviewId("review-changes"), target: new WorkOrderId("wo-changes"), reviewer: "review-agent" });
+  await new StartReview(repository).execute({ projectId, reviewId: new ReviewId("review-changes") });
+  await new AddReviewFinding(repository).execute({ projectId, reviewId: new ReviewId("review-changes"), finding: "Add a regression test" });
+  await new RequestReviewChanges(repository).execute({ projectId, reviewId: new ReviewId("review-changes") });
+  const review = (await repository.findById(projectId))?.findReview(new ReviewId("review-changes"));
+  assert.deepEqual(review?.findingsValue(), ["Add a regression test"]);
+  assert.equal(review?.statusValue(), ReviewStatus.ChangesRequested);
 });
 
 test("ADR use case persists an architectural decision", async () => {

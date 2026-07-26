@@ -131,6 +131,24 @@ export class ApproveReview {
   }
 }
 
+export class AddReviewFinding {
+  constructor(private readonly projects: ProjectRepository) {}
+  async execute(input: { projectId: ProjectId; reviewId: ReviewId; finding: string }): Promise<void> {
+    const { project, review } = await findReview(this.projects, input);
+    review.addFinding(input.finding);
+    await this.projects.save(project);
+  }
+}
+
+export class RequestReviewChanges {
+  constructor(private readonly projects: ProjectRepository) {}
+  async execute(input: { projectId: ProjectId; reviewId: ReviewId }): Promise<void> {
+    const { project, review } = await findReview(this.projects, input);
+    review.requestChanges();
+    await this.projects.save(project);
+  }
+}
+
 export class StartWorkOrder {
   constructor(private readonly projects: ProjectRepository) {}
 
