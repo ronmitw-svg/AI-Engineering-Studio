@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, StartReview, StartWorkOrder, SubmitWorkOrderForReview } from "./ProjectUseCases.js";
+import { ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRelease, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, StartReview, StartWorkOrder, SubmitWorkOrderForReview } from "./ProjectUseCases.js";
 import { AdrId, ReviewId, StakeholderId } from "../value-objects/Ids.js";
+import { ReleaseId } from "../domain/Release.js";
 import type { Project } from "../domain/project.js";
 import type { ProjectRepository } from "../repositories/ProjectRepository.js";
 import { ProjectId, RequirementId, WorkOrderId } from "../value-objects/Ids.js";
@@ -37,8 +38,10 @@ test("application use cases persist controlled project changes", async () => {
   await new StartReview(repository).execute({ projectId, reviewId: new ReviewId("review-work-order") });
   await new ApproveReview(repository).execute({ projectId, reviewId: new ReviewId("review-work-order") });
   await new ApproveWorkOrder(repository).execute({ projectId, workOrderId: new WorkOrderId("wo-1") });
+  await new CreateRelease(repository).execute({ projectId, id: new ReleaseId("release-1"), version: "0.1.0" });
 
   assert.equal(stored?.findWorkOrder(new WorkOrderId("wo-1"))?.statusValue(), WorkOrderStatus.Completed);
+  assert.equal(stored?.getReleases()[0]?.version, "0.1.0");
 });
 
 test("stakeholder use case persists stakeholder context", async () => {
