@@ -1,27 +1,35 @@
 # ADR-0002: Establish a typed core-domain foundation
 
-**Status:** Accepted  
-**Date:** 2026-07-21
+**Status:** Accepted · **Date:** 2026-07-21 · **Review date:** 2026-07-26
 
-## Context
+## Problem
 
-The bootstrap core represented business concepts with mutable classes and
-primitive string IDs. Work-order transitions could bypass review, and the
-repository had no executable proof of the intended invariants.
+The bootstrap core used primitive IDs and mutable state without executable invariants.
+
+## Options
+
+1. Keep rules in CLI/UI adapters. 2. Introduce a typed core-domain package.
+
+## Evaluation
+
+Option 1 duplicates rules and prevents reliable governance. Option 2 isolates
+invariants and allows all adapters to share one model.
 
 ## Decision
 
-`@aes/core` owns typed identifier value objects, domain errors, aggregate
-lifecycles, repository contracts, and a traceability graph. Adapters (CLI,
-filesystem, UI, and future AI providers) must depend on this public API rather
-than reimplementing business rules. Core unit tests use Node's built-in test
-runner to keep the initial dependency footprint small.
+Adopt option 2: `@aes/core` owns typed identifiers, domain errors, aggregates,
+events, repository contracts, and traceability rules.
 
-## Consequences
+## Rationale
 
-- Work-order completion requires review approval.
-- Business-state violations are typed domain errors, not generic errors.
-- The core package has a real `test` script, so the root quality gate executes
-  domain tests.
-- This is a foundation only: persistence, application use cases, releases,
-  human approvals, and AI providers remain future milestones.
+The decision enforces the Core First Architecture and makes invalid state
+transitions testable.
+
+## Impact
+
+Adapters depend on core; business-state violations use typed errors; quality
+gates execute core tests.
+
+## Requirement References
+
+SRS-0001, STR-0001, WO-0001.
