@@ -4,7 +4,7 @@ import { Command } from "commander";
 import fs from "fs-extra";
 import { resolve } from "node:path";
 import { FileSystemProjectRepository } from "@aes/filesystem";
-import { AnalyzeProjectTraceability, ApproveWorkOrder, CreateProject, CreateRequirement, CreateWorkOrder, MarkWorkOrderReady, Priority, ProjectId, RequirementId, RequirementType, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
+import { AdrId, AnalyzeProjectTraceability, ApproveWorkOrder, CreateAdr, CreateProject, CreateRequirement, CreateWorkOrder, MarkWorkOrderReady, Priority, ProjectId, RequirementId, RequirementType, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
 
 const program = new Command();
 
@@ -94,6 +94,19 @@ generate
     await new CreateWorkOrder(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), id: new WorkOrderId(workOrderId), title, description,
       requirementIds: options.requirement.map((id) => new RequirementId(id)) });
     console.log(`Created work order ${workOrderId}.`);
+  });
+
+generate
+  .command("adr <projectId> <adrId> <title>")
+  .description("Create a proposed architecture decision record")
+  .requiredOption("--context <context>", "Decision context")
+  .requiredOption("--decision <decision>", "Decision")
+  .requiredOption("--consequences <consequences>", "Consequences")
+  .option("--workspace <path>", "Workspace root", process.cwd())
+  .action(async (projectId: string, adrId: string, title: string, options: { context: string; decision: string; consequences: string; workspace: string }) => {
+    await new CreateAdr(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), id: new AdrId(adrId), title,
+      context: options.context, decision: options.decision, consequences: options.consequences });
+    console.log(`Created ADR ${adrId}.`);
   });
 
 program
