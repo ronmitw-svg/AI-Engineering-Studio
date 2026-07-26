@@ -7,6 +7,7 @@ import { ProjectId, RequirementId, WorkOrderId } from "../value-objects/Ids.js";
 import { Priority } from "../value-objects/Priority.js";
 import { RequirementType } from "../value-objects/RequirementType.js";
 import { WorkOrderStatus } from "../value-objects/WorkOrderStatus.js";
+import { AnalyzeProjectTraceability } from "./ProjectAnalysis.js";
 
 class InMemoryProjectRepository implements ProjectRepository {
   private readonly projects = new Map<string, Project>();
@@ -34,4 +35,16 @@ test("application use cases persist controlled project changes", async () => {
   await new ApproveWorkOrder(repository).execute({ projectId, workOrderId: new WorkOrderId("wo-1") });
 
   assert.equal(stored?.findWorkOrder(new WorkOrderId("wo-1"))?.statusValue(), WorkOrderStatus.Completed);
+});
+
+test("traceability analysis identifies unlinked requirements", async () => {
+  const repository = new InMemoryProjectRepository();
+  const projectId = new ProjectId("project-analysis");
+  await new CreateProject(repository).execute({ id: projectId, name: "Analysis" });
+  await new CreateRequirement(repository).execute({ projectId, id: new RequirementId("req-unlinked"), title: "Coverage", description: "Must be covered.",
+    type: RequirementType.Functional, priority: Priority.Medium, acceptanceCriteria: ["A work order exists"], source: "Charter" });
+
+  const report = await new AnalyzeProjectTraceability(repository).execute(projectId);
+  assert.deepEqual(report.unlinkedRequirementIds, ["req-unlinked"]);
+  assert.equal(report.isValid, false);
 });

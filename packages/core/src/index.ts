@@ -7,6 +7,7 @@ export * from "./domain/Stakeholder.js";
 export * from "./domain/Traceability.js";
 export * from "./domain/WorkOrder.js";
 export * from "./application/ProjectNotFoundError.js";
+export * from "./application/ProjectAnalysis.js";
 export * from "./application/ProjectUseCases.js";
 export * from "./application/WorkOrderNotFoundError.js";
 export * from "./errors/DomainError.js";
