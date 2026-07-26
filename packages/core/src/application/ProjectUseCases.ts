@@ -9,6 +9,7 @@ import { Stakeholder, type CreateStakeholderInput } from "../domain/Stakeholder.
 import { Review, ReviewStatus } from "../domain/Review.js";
 import { Release } from "../domain/Release.js";
 import { WorkOrderStatus } from "../value-objects/WorkOrderStatus.js";
+import { ReleaseNotFoundError } from "./ReleaseNotFoundError.js";
 import { ReleaseNotReadyError } from "./ReleaseNotReadyError.js";
 import { WorkOrderNotFoundError } from "./WorkOrderNotFoundError.js";
 
@@ -98,7 +99,7 @@ export class CreateReview {
 
 export class CreateRelease {
   constructor(private readonly projects: ProjectRepository) {}
-  async execute(input: { projectId: ProjectId; id: ReleaseId; version: string }): Promise<Release> {
+  async execute(input: { projectId: ProjectId; id: ReleaseId; version: string; proposedBy: string }): Promise<Release> {
     const project = await this.projects.findById(input.projectId);
     if (!project) throw new ProjectNotFoundError(input.projectId.toString());
     const linked = new Set(project.getWorkOrders().flatMap((workOrder) => workOrder.requirementIds.map((id) => id.value)));
@@ -109,6 +110,24 @@ export class CreateRelease {
     project.addRelease(release);
     await this.projects.save(project);
     return release;
+  }
+}
+
+export class ApproveRelease {
+  constructor(private readonly projects: ProjectRepository) {}
+  async execute(input: { projectId: ProjectId; releaseId: ReleaseId; approvedBy: string }): Promise<void> {
+    const { project, release } = await findRelease(this.projects, input);
+    release.approve(input.approvedBy);
+    await this.projects.save(project);
+  }
+}
+
+export class RejectRelease {
+  constructor(private readonly projects: ProjectRepository) {}
+  async execute(input: { projectId: ProjectId; releaseId: ReleaseId; rejectedBy: string }): Promise<void> {
+    const { project, release } = await findRelease(this.projects, input);
+    release.reject(input.rejectedBy);
+    await this.projects.save(project);
   }
 }
 
@@ -226,4 +245,15 @@ async function findWorkOrder(
   const workOrder = project.findWorkOrder(input.workOrderId);
   if (!workOrder) throw new WorkOrderNotFoundError(input.workOrderId.toString());
   return { project, workOrder };
+}
+
+async function findRelease(
+  projects: ProjectRepository,
+  input: { projectId: ProjectId; releaseId: ReleaseId },
+): Promise<{ project: Project; release: Release }> {
+  const project = await projects.findById(input.projectId);
+  if (!project) throw new ProjectNotFoundError(input.projectId.toString());
+  const release = project.findRelease(input.releaseId);
+  if (!release) throw new ReleaseNotFoundError(input.releaseId.toString());
+  return { project, release };
 }

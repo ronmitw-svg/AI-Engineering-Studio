@@ -27,7 +27,18 @@ test("CLI persists a governed work-order workflow end to end", async () => {
     await run(workspace, "review", "start", "demo", "review-1");
     await run(workspace, "review", "approve", "demo", "review-1");
     await run(workspace, "work-order", "approve", "demo", "wo-1");
-    assert.match(await run(workspace, "release", "demo", "release-1", "0.1.0"), /Created release/);
+    assert.match(
+      await run(workspace, "release", "create", "demo", "release-1", "0.1.0", "--proposed-by", "release-manager"),
+      /Proposed release/,
+    );
+    await assert.rejects(
+      run(workspace, "release", "approve", "demo", "release-1", "--approved-by", "release-manager"),
+      /cannot approve their own work/,
+    );
+    assert.match(
+      await run(workspace, "release", "approve", "demo", "release-1", "--approved-by", "release-approver"),
+      /approved by release-approver/,
+    );
 
     assert.match(await run(workspace, "validate", "demo"), /valid/);
     assert.match(

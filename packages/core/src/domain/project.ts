@@ -2,7 +2,7 @@ import { AggregateRoot } from "./AggregateRoot.js";
 import { DuplicateRequirementError } from "../errors/DuplicateRequirementError.js";
 import { MissingRequirementError } from "../errors/MissingRequirementError.js";
 import { ValidationError } from "../errors/ValidationError.js";
-import { ProjectId, RequirementId, ReviewId, WorkOrderId } from "../value-objects/Ids.js";
+import { ProjectId, ReleaseId, RequirementId, ReviewId, WorkOrderId } from "../value-objects/Ids.js";
 import { Requirement } from "./Requirement.js";
 import { WorkOrder } from "./WorkOrder.js";
 import type { CreateWorkOrderInput, WorkOrderSnapshot } from "./WorkOrder.js";
@@ -89,6 +89,7 @@ export class Project extends AggregateRoot<ProjectId> {
   findReview(id: ReviewId): Review | undefined { return this.reviews.find((review) => review.id.equals(id)); }
   addRelease(release: Release): void { this.releases.push(release); }
   getReleases(): Release[] { return [...this.releases]; }
+  findRelease(id: ReleaseId): Release | undefined { return this.releases.find((release) => release.id.equals(id)); }
 
   addRequirement(requirement: Requirement): void {
     if (this.requirements.some((existing) => existing.id.equals(requirement.id))) {

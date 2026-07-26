@@ -4,7 +4,7 @@ import { Command } from "commander";
 import fs from "fs-extra";
 import { resolve } from "node:path";
 import { FileSystemProjectRepository } from "@aes/filesystem";
-import { AddReviewFinding, AdrId, AnalyzeProjectTraceability, ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRelease, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, Priority, ProjectId, RejectReview, ReleaseId, RequestReviewChanges, RequirementId, RequirementType, ReviewId, StakeholderId, StartReview, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
+import { AddReviewFinding, AdrId, AnalyzeProjectTraceability, ApproveRelease, ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRelease, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, Priority, ProjectId, RejectRelease, RejectReview, ReleaseId, RequestReviewChanges, RequirementId, RequirementType, ReviewId, StakeholderId, StartReview, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
 
 const program = new Command();
 
@@ -188,13 +188,30 @@ program
     if (!report.isValid) process.exitCode = 1;
   });
 
-program
-  .command("release <projectId> <releaseId> <version>")
-  .description("Create a release after all quality gates are satisfied")
+const release = program.command("release").description("Propose a release and record its human approval");
+release.command("create <projectId> <releaseId> <version>")
+  .description("Propose a release after all quality gates are satisfied")
+  .requiredOption("--proposed-by <name>", "Who is proposing this release")
   .option("--workspace <path>", "Workspace root", process.cwd())
-  .action(async (projectId: string, releaseId: string, version: string, options: { workspace: string }) => {
-    await new CreateRelease(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), id: new ReleaseId(releaseId), version });
-    console.log(`Created release ${version}.`);
+  .action(async (projectId: string, releaseId: string, version: string, options: { proposedBy: string; workspace: string }) => {
+    await new CreateRelease(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), id: new ReleaseId(releaseId), version, proposedBy: options.proposedBy });
+    console.log(`Proposed release ${version}.`);
+  });
+release.command("approve <projectId> <releaseId>")
+  .description("Record human approval for a proposed release")
+  .requiredOption("--approved-by <name>", "Who is approving this release")
+  .option("--workspace <path>", "Workspace root", process.cwd())
+  .action(async (projectId: string, releaseId: string, options: { approvedBy: string; workspace: string }) => {
+    await new ApproveRelease(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), releaseId: new ReleaseId(releaseId), approvedBy: options.approvedBy });
+    console.log(`Release ${releaseId} approved by ${options.approvedBy}.`);
+  });
+release.command("reject <projectId> <releaseId>")
+  .description("Record a rejection for a proposed release")
+  .requiredOption("--rejected-by <name>", "Who is rejecting this release")
+  .option("--workspace <path>", "Workspace root", process.cwd())
+  .action(async (projectId: string, releaseId: string, options: { rejectedBy: string; workspace: string }) => {
+    await new RejectRelease(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), releaseId: new ReleaseId(releaseId), rejectedBy: options.rejectedBy });
+    console.log(`Release ${releaseId} rejected by ${options.rejectedBy}.`);
   });
 
 function repository(workspace: string): FileSystemProjectRepository {

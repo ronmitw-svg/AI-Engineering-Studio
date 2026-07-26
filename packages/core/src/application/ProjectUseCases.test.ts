@@ -39,7 +39,7 @@ test("application use cases persist controlled project changes", async () => {
   await new StartReview(repository).execute({ projectId, reviewId: new ReviewId("review-work-order") });
   await new ApproveReview(repository).execute({ projectId, reviewId: new ReviewId("review-work-order") });
   await new ApproveWorkOrder(repository).execute({ projectId, workOrderId: new WorkOrderId("wo-1") });
-  await new CreateRelease(repository).execute({ projectId, id: new ReleaseId("release-1"), version: "0.1.0" });
+  await new CreateRelease(repository).execute({ projectId, id: new ReleaseId("release-1"), version: "0.1.0", proposedBy: "release-manager" });
 
   assert.equal(stored?.findWorkOrder(new WorkOrderId("wo-1"))?.statusValue(), WorkOrderStatus.Completed);
   assert.equal(stored?.getReleases()[0]?.version, "0.1.0");
@@ -62,7 +62,7 @@ test("release use case rejects projects with unlinked requirements", async () =>
   await new CreateRequirement(repository).execute({ projectId, id: new RequirementId("req-not-ready"), title: "Coverage", description: "Must be covered.",
     type: RequirementType.Functional, priority: Priority.Medium, acceptanceCriteria: ["Linked"], source: "Charter" });
   await assert.rejects(
-    new CreateRelease(repository).execute({ projectId, id: new ReleaseId("release-not-ready"), version: "0.1.0" }),
+    new CreateRelease(repository).execute({ projectId, id: new ReleaseId("release-not-ready"), version: "0.1.0", proposedBy: "release-manager" }),
     ReleaseNotReadyError,
   );
 });
@@ -177,7 +177,7 @@ test("traceability analysis reports the full ADR/review/release chain", async ()
   await new StartReview(repository).execute({ projectId, reviewId: new ReviewId("review-chain") });
   await new ApproveReview(repository).execute({ projectId, reviewId: new ReviewId("review-chain") });
   await new ApproveWorkOrder(repository).execute({ projectId, workOrderId: new WorkOrderId("wo-chain") });
-  await new CreateRelease(repository).execute({ projectId, id: new ReleaseId("release-chain"), version: "0.1.0" });
+  await new CreateRelease(repository).execute({ projectId, id: new ReleaseId("release-chain"), version: "0.1.0", proposedBy: "release-manager" });
 
   const report = await new AnalyzeProjectTraceability(repository).execute(projectId);
   const [entry] = report.requirementTraceability;
