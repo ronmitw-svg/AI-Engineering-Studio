@@ -10,6 +10,7 @@ export * from "./domain/WorkOrder.js";
 export * from "./application/ProjectNotFoundError.js";
 export * from "./application/ProjectAnalysis.js";
 export * from "./application/ProjectUseCases.js";
+export * from "./application/ReleaseNotReadyError.js";
 export * from "./application/WorkOrderNotFoundError.js";
 export * from "./errors/DomainError.js";
 export * from "./errors/DuplicateRequirementError.js";

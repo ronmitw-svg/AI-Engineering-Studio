@@ -3,6 +3,7 @@ import test from "node:test";
 import { ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRelease, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, StartReview, StartWorkOrder, SubmitWorkOrderForReview } from "./ProjectUseCases.js";
 import { AdrId, ReviewId, StakeholderId } from "../value-objects/Ids.js";
 import { ReleaseId } from "../domain/Release.js";
+import { ReleaseNotReadyError } from "./ReleaseNotReadyError.js";
 import type { Project } from "../domain/project.js";
 import type { ProjectRepository } from "../repositories/ProjectRepository.js";
 import { ProjectId, RequirementId, WorkOrderId } from "../value-objects/Ids.js";
@@ -51,6 +52,18 @@ test("stakeholder use case persists stakeholder context", async () => {
   await new CreateStakeholder(repository).execute({ projectId, id: new StakeholderId("stk-1"), name: "Product owner", role: "Sponsor",
     interest: "Delivery", influence: "High", notes: "Approves scope." });
   assert.equal((await repository.findById(projectId))?.getStakeholders()[0]?.name, "Product owner");
+});
+
+test("release use case rejects projects with unlinked requirements", async () => {
+  const repository = new InMemoryProjectRepository();
+  const projectId = new ProjectId("project-not-ready");
+  await new CreateProject(repository).execute({ id: projectId, name: "Not ready" });
+  await new CreateRequirement(repository).execute({ projectId, id: new RequirementId("req-not-ready"), title: "Coverage", description: "Must be covered.",
+    type: RequirementType.Functional, priority: Priority.Medium, acceptanceCriteria: ["Linked"], source: "Charter" });
+  await assert.rejects(
+    new CreateRelease(repository).execute({ projectId, id: new ReleaseId("release-not-ready"), version: "0.1.0" }),
+    ReleaseNotReadyError,
+  );
 });
 
 test("review use case links an independent reviewer to a work order", async () => {

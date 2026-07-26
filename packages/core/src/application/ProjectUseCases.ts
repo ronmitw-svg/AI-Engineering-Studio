@@ -9,6 +9,7 @@ import { Stakeholder, type CreateStakeholderInput } from "../domain/Stakeholder.
 import { Review, ReviewStatus } from "../domain/Review.js";
 import { Release, ReleaseId } from "../domain/Release.js";
 import { WorkOrderStatus } from "../value-objects/WorkOrderStatus.js";
+import { ReleaseNotReadyError } from "./ReleaseNotReadyError.js";
 import { WorkOrderNotFoundError } from "./WorkOrderNotFoundError.js";
 
 export class CreateProject {
@@ -103,7 +104,7 @@ export class CreateRelease {
     if (!project) throw new ProjectNotFoundError(input.projectId.toString());
     const linked = new Set(project.getWorkOrders().flatMap((workOrder) => workOrder.requirementIds.map((id) => id.value)));
     if (project.getRequirements().some((requirement) => !linked.has(requirement.id.value)) || project.getWorkOrders().some((workOrder) => workOrder.statusValue() !== WorkOrderStatus.Completed)) {
-      throw new WorkOrderNotFoundError("release readiness requirements");
+      throw new ReleaseNotReadyError(input.projectId.toString());
     }
     const release = Release.create(input);
     project.addRelease(release);
