@@ -7,7 +7,7 @@ import { Requirement } from "./Requirement.js";
 import { WorkOrder } from "./WorkOrder.js";
 import type { CreateWorkOrderInput, WorkOrderSnapshot } from "./WorkOrder.js";
 import type { RequirementSnapshot } from "./Requirement.js";
-import { ArchitectureDecisionRecord, type AdrSnapshot } from "./ArchitectureDecisionRecord.js";
+import { ArchitectureDecisionRecord, type AdrSnapshot, type CreateAdrInput } from "./ArchitectureDecisionRecord.js";
 import { Stakeholder, type StakeholderSnapshot } from "./Stakeholder.js";
 import { Review, type ReviewSnapshot } from "./Review.js";
 import { Release, type ReleaseSnapshot } from "./Release.js";
@@ -68,6 +68,20 @@ export class Project extends AggregateRoot<ProjectId> {
 
   addAdr(adr: ArchitectureDecisionRecord): void { this.adrs.push(adr); }
   getAdrs(): ArchitectureDecisionRecord[] { return [...this.adrs]; }
+
+  createAdr(input: CreateAdrInput): ArchitectureDecisionRecord {
+    for (const requirementId of input.requirementIds) {
+      if (!this.requirements.some((requirement) => requirement.id.equals(requirementId))) {
+        throw new MissingRequirementError(requirementId.toString());
+      }
+    }
+
+    const adr = ArchitectureDecisionRecord.create(input);
+
+    this.adrs.push(adr);
+
+    return adr;
+  }
   addStakeholder(stakeholder: Stakeholder): void { this.stakeholders.push(stakeholder); }
   getStakeholders(): Stakeholder[] { return [...this.stakeholders]; }
   addReview(review: Review): void { this.reviews.push(review); }

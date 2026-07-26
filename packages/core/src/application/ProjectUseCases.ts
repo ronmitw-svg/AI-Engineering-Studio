@@ -63,8 +63,7 @@ export class CreateAdr {
   async execute(input: CreateAdrInput & { projectId: ProjectId }): Promise<ArchitectureDecisionRecord> {
     const project = await this.projects.findById(input.projectId);
     if (!project) throw new ProjectNotFoundError(input.projectId.toString());
-    const adr = ArchitectureDecisionRecord.create(input);
-    project.addAdr(adr);
+    const adr = project.createAdr(input);
     await this.projects.save(project);
     return adr;
   }

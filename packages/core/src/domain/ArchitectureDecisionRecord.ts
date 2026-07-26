@@ -1,6 +1,6 @@
 import { InvalidStateTransitionError } from "../errors/InvalidStateTransitionError.js";
 import { ValidationError } from "../errors/ValidationError.js";
-import { AdrId } from "../value-objects/Ids.js";
+import { AdrId, RequirementId } from "../value-objects/Ids.js";
 import { AggregateRoot } from "./AggregateRoot.js";
 
 export enum AdrStatus {
@@ -17,6 +17,7 @@ export interface CreateAdrInput {
   context: string;
   decision: string;
   consequences: string;
+  requirementIds: readonly RequirementId[];
   createdAt?: Date;
 }
 
@@ -26,6 +27,7 @@ export interface AdrSnapshot {
   context: string;
   decision: string;
   consequences: string;
+  requirementIds: readonly string[];
   status: AdrStatus;
   createdAt: string;
   supersededBy?: string;
@@ -42,6 +44,7 @@ export class ArchitectureDecisionRecord extends AggregateRoot<AdrId> {
     public readonly context: string,
     public readonly decision: string,
     public readonly consequences: string,
+    public readonly requirementIds: readonly RequirementId[],
     createdAt: Date,
   ) {
     super(id);
@@ -53,12 +56,16 @@ export class ArchitectureDecisionRecord extends AggregateRoot<AdrId> {
     if (fields.some((field) => !field)) {
       throw new ValidationError("An ADR needs a title, context, decision, and consequences.");
     }
-    return new ArchitectureDecisionRecord(input.id, fields[0], fields[1], fields[2], fields[3], input.createdAt ?? new Date());
+    if (!input.requirementIds.length) {
+      throw new ValidationError("An ADR must reference at least one requirement.");
+    }
+    return new ArchitectureDecisionRecord(input.id, fields[0], fields[1], fields[2], fields[3], input.requirementIds, input.createdAt ?? new Date());
   }
 
   static rehydrate(snapshot: AdrSnapshot): ArchitectureDecisionRecord {
     const adr = ArchitectureDecisionRecord.create({ id: new AdrId(snapshot.id), title: snapshot.title, context: snapshot.context,
-      decision: snapshot.decision, consequences: snapshot.consequences, createdAt: new Date(snapshot.createdAt) });
+      decision: snapshot.decision, consequences: snapshot.consequences, requirementIds: snapshot.requirementIds.map((id) => new RequirementId(id)),
+      createdAt: new Date(snapshot.createdAt) });
     adr.status = snapshot.status;
     adr.supersededBy = snapshot.supersededBy ? new AdrId(snapshot.supersededBy) : undefined;
     return adr;
@@ -66,7 +73,7 @@ export class ArchitectureDecisionRecord extends AggregateRoot<AdrId> {
 
   toSnapshot(): AdrSnapshot {
     return { id: this.id.value, title: this.title, context: this.context, decision: this.decision, consequences: this.consequences,
-      status: this.status, createdAt: this.createdAt.toISOString(), supersededBy: this.supersededBy?.value };
+      requirementIds: this.requirementIds.map(String), status: this.status, createdAt: this.createdAt.toISOString(), supersededBy: this.supersededBy?.value };
   }
 
   accept(): void {

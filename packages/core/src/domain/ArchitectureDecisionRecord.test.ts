@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { InvalidStateTransitionError } from "../errors/InvalidStateTransitionError.js";
-import { AdrId } from "../value-objects/Ids.js";
+import { AdrId, RequirementId } from "../value-objects/Ids.js";
 import { ArchitectureDecisionRecord, AdrStatus } from "./ArchitectureDecisionRecord.js";
+import { ValidationError } from "../errors/ValidationError.js";
 
 test("ADR can only be superseded after acceptance", () => {
   const adr = ArchitectureDecisionRecord.create({
@@ -11,10 +12,22 @@ test("ADR can only be superseded after acceptance", () => {
     context: "Business rules need a stable home.",
     decision: "Place business rules in @aes/core.",
     consequences: "Adapters depend on core.",
+    requirementIds: [new RequirementId("req-1")],
   });
 
   assert.throws(() => adr.supersede(new AdrId("adr-2")), InvalidStateTransitionError);
   adr.accept();
   adr.supersede(new AdrId("adr-2"));
   assert.equal(adr.statusValue(), AdrStatus.Superseded);
+});
+
+test("ADR must reference at least one requirement", () => {
+  assert.throws(() => ArchitectureDecisionRecord.create({
+    id: new AdrId("adr-2"),
+    title: "Use a core package",
+    context: "Business rules need a stable home.",
+    decision: "Place business rules in @aes/core.",
+    consequences: "Adapters depend on core.",
+    requirementIds: [],
+  }), ValidationError);
 });

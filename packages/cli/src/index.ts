@@ -126,10 +126,11 @@ generate
   .requiredOption("--context <context>", "Decision context")
   .requiredOption("--decision <decision>", "Decision")
   .requiredOption("--consequences <consequences>", "Consequences")
+  .requiredOption("--requirement <id...>", "Requirement IDs this decision addresses")
   .option("--workspace <path>", "Workspace root", process.cwd())
-  .action(async (projectId: string, adrId: string, title: string, options: { context: string; decision: string; consequences: string; workspace: string }) => {
+  .action(async (projectId: string, adrId: string, title: string, options: { context: string; decision: string; consequences: string; requirement: string[]; workspace: string }) => {
     await new CreateAdr(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), id: new AdrId(adrId), title,
-      context: options.context, decision: options.decision, consequences: options.consequences });
+      context: options.context, decision: options.decision, consequences: options.consequences, requirementIds: options.requirement.map((id) => new RequirementId(id)) });
     console.log(`Created ADR ${adrId}.`);
   });
 

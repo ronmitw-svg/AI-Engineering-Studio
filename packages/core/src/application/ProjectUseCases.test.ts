@@ -4,6 +4,7 @@ import { AddReviewFinding, ApproveReview, ApproveWorkOrder, CreateAdr, CreatePro
 import { ReviewStatus } from "../domain/Review.js";
 import { AdrId, ProjectId, ReleaseId, RequirementId, ReviewId, StakeholderId, WorkOrderId } from "../value-objects/Ids.js";
 import { ReleaseNotReadyError } from "./ReleaseNotReadyError.js";
+import { MissingRequirementError } from "../errors/MissingRequirementError.js";
 import type { Project } from "../domain/project.js";
 import type { ProjectRepository } from "../repositories/ProjectRepository.js";
 import { Priority } from "../value-objects/Priority.js";
@@ -114,13 +115,27 @@ test("rejecting a review blocks its work order pending a decision", async () => 
   assert.equal((await repository.findById(projectId))?.findWorkOrder(new WorkOrderId("wo-rejected"))?.statusValue(), WorkOrderStatus.Blocked);
 });
 
-test("ADR use case persists an architectural decision", async () => {
+test("ADR use case persists an architectural decision linked to its requirement", async () => {
   const repository = new InMemoryProjectRepository();
   const projectId = new ProjectId("project-adr");
   await new CreateProject(repository).execute({ id: projectId, name: "ADR project" });
+  await new CreateRequirement(repository).execute({ projectId, id: new RequirementId("req-adr"), title: "Boundaries", description: "Enforce boundaries.",
+    type: RequirementType.Functional, priority: Priority.Medium, acceptanceCriteria: ["Core owns rules"], source: "Charter" });
   await new CreateAdr(repository).execute({ projectId, id: new AdrId("adr-1"), title: "Use core", context: "Rules need boundaries.",
-    decision: "Use a core package.", consequences: "Adapters depend on core." });
-  assert.equal((await repository.findById(projectId))?.getAdrs().length, 1);
+    decision: "Use a core package.", consequences: "Adapters depend on core.", requirementIds: [new RequirementId("req-adr")] });
+  const adr = (await repository.findById(projectId))?.getAdrs()[0];
+  assert.equal(adr?.requirementIds[0]?.value, "req-adr");
+});
+
+test("ADR use case rejects references to requirements outside the project", async () => {
+  const repository = new InMemoryProjectRepository();
+  const projectId = new ProjectId("project-adr-missing");
+  await new CreateProject(repository).execute({ id: projectId, name: "ADR project" });
+  await assert.rejects(
+    new CreateAdr(repository).execute({ projectId, id: new AdrId("adr-missing"), title: "Use core", context: "Rules need boundaries.",
+      decision: "Use a core package.", consequences: "Adapters depend on core.", requirementIds: [new RequirementId("req-missing")] }),
+    MissingRequirementError,
+  );
 });
 
 test("traceability analysis identifies unlinked requirements", async () => {
