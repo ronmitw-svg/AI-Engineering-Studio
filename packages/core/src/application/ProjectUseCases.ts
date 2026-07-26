@@ -6,7 +6,7 @@ import { ProjectId, ReviewId, WorkOrderId } from "../value-objects/Ids.js";
 import { ProjectNotFoundError } from "./ProjectNotFoundError.js";
 import { ArchitectureDecisionRecord, type CreateAdrInput } from "../domain/ArchitectureDecisionRecord.js";
 import { Stakeholder, type CreateStakeholderInput } from "../domain/Stakeholder.js";
-import { Review } from "../domain/Review.js";
+import { Review, ReviewStatus } from "../domain/Review.js";
 import { WorkOrderNotFoundError } from "./WorkOrderNotFoundError.js";
 
 export class CreateProject {
@@ -94,6 +94,24 @@ export class CreateReview {
   }
 }
 
+export class StartReview {
+  constructor(private readonly projects: ProjectRepository) {}
+  async execute(input: { projectId: ProjectId; reviewId: ReviewId }): Promise<void> {
+    const { project, review } = await findReview(this.projects, input);
+    review.start();
+    await this.projects.save(project);
+  }
+}
+
+export class ApproveReview {
+  constructor(private readonly projects: ProjectRepository) {}
+  async execute(input: { projectId: ProjectId; reviewId: ReviewId }): Promise<void> {
+    const { project, review } = await findReview(this.projects, input);
+    review.approve();
+    await this.projects.save(project);
+  }
+}
+
 export class StartWorkOrder {
   constructor(private readonly projects: ProjectRepository) {}
 
@@ -132,9 +150,20 @@ export class ApproveWorkOrder {
 
   async execute(input: { projectId: ProjectId; workOrderId: WorkOrderId }): Promise<void> {
     const { project, workOrder } = await findWorkOrder(this.projects, input);
+    if (!project.getReviews().some((review) => review.target.equals(workOrder.id) && review.statusValue() === ReviewStatus.Approved)) {
+      throw new WorkOrderNotFoundError(`approved review for ${workOrder.id.toString()}`);
+    }
     workOrder.approve();
     await this.projects.save(project);
   }
+}
+
+async function findReview(projects: ProjectRepository, input: { projectId: ProjectId; reviewId: ReviewId }): Promise<{ project: Project; review: Review }> {
+  const project = await projects.findById(input.projectId);
+  if (!project) throw new ProjectNotFoundError(input.projectId.toString());
+  const review = project.findReview(input.reviewId);
+  if (!review) throw new WorkOrderNotFoundError(`review ${input.reviewId.toString()}`);
+  return { project, review };
 }
 
 async function findWorkOrder(

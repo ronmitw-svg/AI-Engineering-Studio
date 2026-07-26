@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ApproveWorkOrder, CreateAdr, CreateProject, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, StartWorkOrder, SubmitWorkOrderForReview } from "./ProjectUseCases.js";
+import { ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, StartReview, StartWorkOrder, SubmitWorkOrderForReview } from "./ProjectUseCases.js";
 import { AdrId, ReviewId, StakeholderId } from "../value-objects/Ids.js";
 import type { Project } from "../domain/project.js";
 import type { ProjectRepository } from "../repositories/ProjectRepository.js";
@@ -33,6 +33,9 @@ test("application use cases persist controlled project changes", async () => {
   await new MarkWorkOrderReady(repository).execute({ projectId, workOrderId: new WorkOrderId("wo-1") });
   await start.execute({ projectId, workOrderId: new WorkOrderId("wo-1") });
   await new SubmitWorkOrderForReview(repository).execute({ projectId, workOrderId: new WorkOrderId("wo-1") });
+  await new CreateReview(repository).execute({ projectId, id: new ReviewId("review-work-order"), target: new WorkOrderId("wo-1"), reviewer: "reviewer" });
+  await new StartReview(repository).execute({ projectId, reviewId: new ReviewId("review-work-order") });
+  await new ApproveReview(repository).execute({ projectId, reviewId: new ReviewId("review-work-order") });
   await new ApproveWorkOrder(repository).execute({ projectId, workOrderId: new WorkOrderId("wo-1") });
 
   assert.equal(stored?.findWorkOrder(new WorkOrderId("wo-1"))?.statusValue(), WorkOrderStatus.Completed);
