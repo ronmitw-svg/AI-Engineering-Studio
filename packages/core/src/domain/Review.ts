@@ -11,6 +11,16 @@ export enum ReviewStatus {
   Rejected = "Rejected",
 }
 
+export interface ReviewSnapshot {
+  id: string;
+  target: string;
+  reviewer: string;
+  status: ReviewStatus;
+  findings: readonly string[];
+  createdAt: string;
+  completedAt?: string;
+}
+
 export class Review extends AggregateRoot<ReviewId> {
   private status = ReviewStatus.Pending;
   private readonly findings: string[] = [];
@@ -31,6 +41,19 @@ export class Review extends AggregateRoot<ReviewId> {
       throw new ValidationError("A review must have a reviewer.");
     }
     return new Review(input.id, input.target, reviewer, input.createdAt ?? new Date());
+  }
+
+  static rehydrate(snapshot: ReviewSnapshot): Review {
+    const review = Review.create({ id: new ReviewId(snapshot.id), target: new WorkOrderId(snapshot.target), reviewer: snapshot.reviewer, createdAt: new Date(snapshot.createdAt) });
+    review.status = snapshot.status;
+    review.findings.push(...snapshot.findings);
+    review.completedAt = snapshot.completedAt ? new Date(snapshot.completedAt) : undefined;
+    return review;
+  }
+
+  toSnapshot(): ReviewSnapshot {
+    return { id: this.id.value, target: this.target.value, reviewer: this.reviewer, status: this.status, findings: this.findings,
+      createdAt: this.createdAt.toISOString(), completedAt: this.completedAt?.toISOString() };
   }
 
   start(): void {

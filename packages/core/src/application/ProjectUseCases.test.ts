@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ApproveWorkOrder, CreateAdr, CreateProject, CreateRequirement, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, StartWorkOrder, SubmitWorkOrderForReview } from "./ProjectUseCases.js";
-import { AdrId, StakeholderId } from "../value-objects/Ids.js";
+import { ApproveWorkOrder, CreateAdr, CreateProject, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, StartWorkOrder, SubmitWorkOrderForReview } from "./ProjectUseCases.js";
+import { AdrId, ReviewId, StakeholderId } from "../value-objects/Ids.js";
 import type { Project } from "../domain/project.js";
 import type { ProjectRepository } from "../repositories/ProjectRepository.js";
 import { ProjectId, RequirementId, WorkOrderId } from "../value-objects/Ids.js";
@@ -45,6 +45,17 @@ test("stakeholder use case persists stakeholder context", async () => {
   await new CreateStakeholder(repository).execute({ projectId, id: new StakeholderId("stk-1"), name: "Product owner", role: "Sponsor",
     interest: "Delivery", influence: "High", notes: "Approves scope." });
   assert.equal((await repository.findById(projectId))?.getStakeholders()[0]?.name, "Product owner");
+});
+
+test("review use case links an independent reviewer to a work order", async () => {
+  const repository = new InMemoryProjectRepository();
+  const projectId = new ProjectId("project-review");
+  await new CreateProject(repository).execute({ id: projectId, name: "Review project" });
+  await new CreateRequirement(repository).execute({ projectId, id: new RequirementId("req-review"), title: "Review", description: "Review work.",
+    type: RequirementType.Functional, priority: Priority.Medium, acceptanceCriteria: ["Review exists"], source: "Charter" });
+  await new CreateWorkOrder(repository).execute({ projectId, id: new WorkOrderId("wo-review"), title: "Implement", description: "Implement review.", requirementIds: [new RequirementId("req-review")] });
+  await new CreateReview(repository).execute({ projectId, id: new ReviewId("review-1"), target: new WorkOrderId("wo-review"), reviewer: "review-agent" });
+  assert.equal((await repository.findById(projectId))?.getReviews()[0]?.reviewer, "review-agent");
 });
 
 test("ADR use case persists an architectural decision", async () => {

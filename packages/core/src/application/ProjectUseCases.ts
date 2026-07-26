@@ -2,10 +2,11 @@ import { Project } from "../domain/project.js";
 import { Requirement, type CreateRequirementInput } from "../domain/Requirement.js";
 import { type CreateWorkOrderInput, WorkOrder } from "../domain/WorkOrder.js";
 import { ProjectRepository } from "../repositories/ProjectRepository.js";
-import { ProjectId, WorkOrderId } from "../value-objects/Ids.js";
+import { ProjectId, ReviewId, WorkOrderId } from "../value-objects/Ids.js";
 import { ProjectNotFoundError } from "./ProjectNotFoundError.js";
 import { ArchitectureDecisionRecord, type CreateAdrInput } from "../domain/ArchitectureDecisionRecord.js";
 import { Stakeholder, type CreateStakeholderInput } from "../domain/Stakeholder.js";
+import { Review } from "../domain/Review.js";
 import { WorkOrderNotFoundError } from "./WorkOrderNotFoundError.js";
 
 export class CreateProject {
@@ -76,6 +77,20 @@ export class CreateStakeholder {
     project.addStakeholder(stakeholder);
     await this.projects.save(project);
     return stakeholder;
+  }
+}
+
+export class CreateReview {
+  constructor(private readonly projects: ProjectRepository) {}
+
+  async execute(input: { projectId: ProjectId; id: ReviewId; target: WorkOrderId; reviewer: string }): Promise<Review> {
+    const project = await this.projects.findById(input.projectId);
+    if (!project) throw new ProjectNotFoundError(input.projectId.toString());
+    if (!project.findWorkOrder(input.target)) throw new WorkOrderNotFoundError(input.target.toString());
+    const review = Review.create(input);
+    project.addReview(review);
+    await this.projects.save(project);
+    return review;
   }
 }
 
