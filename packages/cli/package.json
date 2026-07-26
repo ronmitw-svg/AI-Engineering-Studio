@@ -13,6 +13,7 @@
     "test": "pnpm build && node --test dist/**/*.test.js"
   },
   "dependencies": {
+    "@aes/ai": "workspace:*",
     "@aes/core": "workspace:*",
     "@aes/filesystem": "workspace:*",
     "commander": "^14.0.0",

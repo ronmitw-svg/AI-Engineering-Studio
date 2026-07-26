@@ -2,7 +2,7 @@ import { AggregateRoot } from "./AggregateRoot.js";
 import { DuplicateRequirementError } from "../errors/DuplicateRequirementError.js";
 import { MissingRequirementError } from "../errors/MissingRequirementError.js";
 import { ValidationError } from "../errors/ValidationError.js";
-import { ProjectId, ReleaseId, RequirementId, ReviewId, WorkOrderId } from "../value-objects/Ids.js";
+import { AdrId, ProjectId, ReleaseId, RequirementId, ReviewId, WorkOrderId } from "../value-objects/Ids.js";
 import { Requirement } from "./Requirement.js";
 import { WorkOrder } from "./WorkOrder.js";
 import type { CreateWorkOrderInput, WorkOrderSnapshot } from "./WorkOrder.js";
@@ -68,6 +68,7 @@ export class Project extends AggregateRoot<ProjectId> {
 
   addAdr(adr: ArchitectureDecisionRecord): void { this.adrs.push(adr); }
   getAdrs(): ArchitectureDecisionRecord[] { return [...this.adrs]; }
+  findAdr(id: AdrId): ArchitectureDecisionRecord | undefined { return this.adrs.find((adr) => adr.id.equals(id)); }
 
   createAdr(input: CreateAdrInput): ArchitectureDecisionRecord {
     for (const requirementId of input.requirementIds) {

@@ -2,7 +2,8 @@ import { Project } from "../domain/project.js";
 import { Requirement, type CreateRequirementInput } from "../domain/Requirement.js";
 import { type CreateWorkOrderInput, WorkOrder } from "../domain/WorkOrder.js";
 import { ProjectRepository } from "../repositories/ProjectRepository.js";
-import { ProjectId, ReleaseId, ReviewId, WorkOrderId } from "../value-objects/Ids.js";
+import { AdrId, ProjectId, ReleaseId, ReviewId, WorkOrderId } from "../value-objects/Ids.js";
+import { AdrNotFoundError } from "./AdrNotFoundError.js";
 import { ProjectNotFoundError } from "./ProjectNotFoundError.js";
 import { ArchitectureDecisionRecord, type CreateAdrInput } from "../domain/ArchitectureDecisionRecord.js";
 import { Stakeholder, type CreateStakeholderInput } from "../domain/Stakeholder.js";
@@ -127,6 +128,24 @@ export class RejectRelease {
   async execute(input: { projectId: ProjectId; releaseId: ReleaseId; rejectedBy: string }): Promise<void> {
     const { project, release } = await findRelease(this.projects, input);
     release.reject(input.rejectedBy);
+    await this.projects.save(project);
+  }
+}
+
+export class AcceptAdr {
+  constructor(private readonly projects: ProjectRepository) {}
+  async execute(input: { projectId: ProjectId; adrId: AdrId }): Promise<void> {
+    const { project, adr } = await findAdr(this.projects, input);
+    adr.accept();
+    await this.projects.save(project);
+  }
+}
+
+export class RejectAdr {
+  constructor(private readonly projects: ProjectRepository) {}
+  async execute(input: { projectId: ProjectId; adrId: AdrId }): Promise<void> {
+    const { project, adr } = await findAdr(this.projects, input);
+    adr.reject();
     await this.projects.save(project);
   }
 }
@@ -256,4 +275,15 @@ async function findRelease(
   const release = project.findRelease(input.releaseId);
   if (!release) throw new ReleaseNotFoundError(input.releaseId.toString());
   return { project, release };
+}
+
+async function findAdr(
+  projects: ProjectRepository,
+  input: { projectId: ProjectId; adrId: AdrId },
+): Promise<{ project: Project; adr: ArchitectureDecisionRecord }> {
+  const project = await projects.findById(input.projectId);
+  if (!project) throw new ProjectNotFoundError(input.projectId.toString());
+  const adr = project.findAdr(input.adrId);
+  if (!adr) throw new AdrNotFoundError(input.adrId.toString());
+  return { project, adr };
 }

@@ -3,8 +3,9 @@
 import { Command } from "commander";
 import fs from "fs-extra";
 import { resolve } from "node:path";
+import { AnthropicAiProvider } from "@aes/ai";
 import { FileSystemProjectRepository } from "@aes/filesystem";
-import { AddReviewFinding, AdrId, AnalyzeProjectTraceability, ApproveRelease, ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRelease, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, ListProjects, MarkWorkOrderReady, Priority, ProjectId, RejectRelease, RejectReview, ReleaseId, RequestReviewChanges, RequirementId, RequirementType, ReviewId, StakeholderId, StartReview, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
+import { AcceptAdr, AddReviewFinding, AdrId, AnalyzeProjectTraceability, ApproveRelease, ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRelease, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, DraftAdr, ListProjects, MarkWorkOrderReady, Priority, ProjectId, RejectAdr, RejectRelease, RejectReview, ReleaseId, RequestReviewChanges, RequirementId, RequirementType, ReviewId, StakeholderId, StartReview, StartWorkOrder, SubmitWorkOrderForReview, WorkOrderId } from "@aes/core";
 
 const program = new Command();
 
@@ -149,6 +150,32 @@ generate
     console.log(`Created ADR ${adrId}.`);
   });
 
+const adr = program.command("adr").description("Record a project's human decision on a proposed ADR");
+for (const [name, UseCase] of [["accept", AcceptAdr], ["reject", RejectAdr]] as const) {
+  adr.command(`${name} <projectId> <adrId>`).option("--workspace <path>", "Workspace root", process.cwd())
+    .action(async (projectId: string, adrId: string, options: { workspace: string }) => {
+      await new UseCase(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), adrId: new AdrId(adrId) });
+      console.log(`ADR ${adrId} ${name}ed.`);
+    });
+}
+
+const ai = program.command("ai").description("AI-assisted drafting of governed artefacts (always lands as Proposed, pending human approval)");
+ai.command("draft-adr <projectId> <adrId> <title>")
+  .description("Ask the configured AI provider to draft an ADR's context/decision/consequences")
+  .requiredOption("--question <question>", "The question this decision should answer")
+  .requiredOption("--requirement <id...>", "Requirement IDs this decision addresses")
+  .option("--workspace <path>", "Workspace root", process.cwd())
+  .action(async (projectId: string, adrId: string, title: string, options: { question: string; requirement: string[]; workspace: string }) => {
+    const adr = await new DraftAdr(repository(options.workspace), aiProvider()).execute({
+      projectId: new ProjectId(projectId), id: new AdrId(adrId), title, question: options.question,
+      requirementIds: options.requirement.map((id) => new RequirementId(id)),
+    });
+    console.log(`Drafted ADR ${adrId} (status: Proposed - review and run 'aes adr accept' before relying on it).`);
+    console.log(`Context: ${adr.context}`);
+    console.log(`Decision: ${adr.decision}`);
+    console.log(`Consequences: ${adr.consequences}`);
+  });
+
 generate
   .command("stakeholder <projectId> <stakeholderId> <name>")
   .description("Create a project stakeholder")
@@ -231,6 +258,14 @@ release.command("reject <projectId> <releaseId>")
 
 function repository(workspace: string): FileSystemProjectRepository {
   return new FileSystemProjectRepository(resolve(workspace));
+}
+
+function aiProvider(): AnthropicAiProvider {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    throw new Error("ANTHROPIC_API_KEY is not set. Export it before running an `aes ai` command.");
+  }
+  return new AnthropicAiProvider({ apiKey });
 }
 
 program.parse();
