@@ -6,3 +6,4 @@ export class WorkOrderId extends Identifier {}
 export class AdrId extends Identifier {}
 export class StakeholderId extends Identifier {}
 export class ReviewId extends Identifier {}
+export class ReleaseId extends Identifier {}

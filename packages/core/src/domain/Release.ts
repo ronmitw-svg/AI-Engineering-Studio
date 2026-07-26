@@ -1,12 +1,6 @@
 import { ValidationError } from "../errors/ValidationError.js";
+import { ReleaseId } from "../value-objects/Ids.js";
 import { AggregateRoot } from "./AggregateRoot.js";
-
-export class ReleaseId {
-  public readonly value: string;
-  constructor(value: string) { this.value = value.trim(); if (!this.value) throw new ValidationError("A release ID must not be empty."); }
-  equals(other?: ReleaseId): boolean { return other?.value === this.value; }
-  toString(): string { return this.value; }
-}
 
 export interface ReleaseSnapshot { id: string; version: string; createdAt: string; }
 
