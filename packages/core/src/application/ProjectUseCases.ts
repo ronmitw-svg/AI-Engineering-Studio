@@ -7,6 +7,8 @@ import { ProjectNotFoundError } from "./ProjectNotFoundError.js";
 import { ArchitectureDecisionRecord, type CreateAdrInput } from "../domain/ArchitectureDecisionRecord.js";
 import { Stakeholder, type CreateStakeholderInput } from "../domain/Stakeholder.js";
 import { Review, ReviewStatus } from "../domain/Review.js";
+import { Release, ReleaseId } from "../domain/Release.js";
+import { WorkOrderStatus } from "../value-objects/WorkOrderStatus.js";
 import { WorkOrderNotFoundError } from "./WorkOrderNotFoundError.js";
 
 export class CreateProject {
@@ -91,6 +93,22 @@ export class CreateReview {
     project.addReview(review);
     await this.projects.save(project);
     return review;
+  }
+}
+
+export class CreateRelease {
+  constructor(private readonly projects: ProjectRepository) {}
+  async execute(input: { projectId: ProjectId; id: ReleaseId; version: string }): Promise<Release> {
+    const project = await this.projects.findById(input.projectId);
+    if (!project) throw new ProjectNotFoundError(input.projectId.toString());
+    const linked = new Set(project.getWorkOrders().flatMap((workOrder) => workOrder.requirementIds.map((id) => id.value)));
+    if (project.getRequirements().some((requirement) => !linked.has(requirement.id.value)) || project.getWorkOrders().some((workOrder) => workOrder.statusValue() !== WorkOrderStatus.Completed)) {
+      throw new WorkOrderNotFoundError("release readiness requirements");
+    }
+    const release = Release.create(input);
+    project.addRelease(release);
+    await this.projects.save(project);
+    return release;
   }
 }
 

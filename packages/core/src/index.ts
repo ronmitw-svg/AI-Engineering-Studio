@@ -3,6 +3,7 @@ export * from "./domain/document.js";
 export * from "./domain/ArchitectureDecisionRecord.js";
 export * from "./domain/Requirement.js";
 export * from "./domain/Review.js";
+export * from "./domain/Release.js";
 export * from "./domain/Stakeholder.js";
 export * from "./domain/Traceability.js";
 export * from "./domain/WorkOrder.js";
