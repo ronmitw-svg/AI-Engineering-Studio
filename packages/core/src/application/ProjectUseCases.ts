@@ -5,6 +5,7 @@ import { ProjectRepository } from "../repositories/ProjectRepository.js";
 import { ProjectId, WorkOrderId } from "../value-objects/Ids.js";
 import { ProjectNotFoundError } from "./ProjectNotFoundError.js";
 import { ArchitectureDecisionRecord, type CreateAdrInput } from "../domain/ArchitectureDecisionRecord.js";
+import { Stakeholder, type CreateStakeholderInput } from "../domain/Stakeholder.js";
 import { WorkOrderNotFoundError } from "./WorkOrderNotFoundError.js";
 
 export class CreateProject {
@@ -62,6 +63,19 @@ export class CreateAdr {
     project.addAdr(adr);
     await this.projects.save(project);
     return adr;
+  }
+}
+
+export class CreateStakeholder {
+  constructor(private readonly projects: ProjectRepository) {}
+
+  async execute(input: CreateStakeholderInput & { projectId: ProjectId }): Promise<Stakeholder> {
+    const project = await this.projects.findById(input.projectId);
+    if (!project) throw new ProjectNotFoundError(input.projectId.toString());
+    const stakeholder = Stakeholder.create(input);
+    project.addStakeholder(stakeholder);
+    await this.projects.save(project);
+    return stakeholder;
   }
 }
 

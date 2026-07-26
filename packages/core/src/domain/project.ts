@@ -8,6 +8,7 @@ import { WorkOrder } from "./WorkOrder.js";
 import type { CreateWorkOrderInput, WorkOrderSnapshot } from "./WorkOrder.js";
 import type { RequirementSnapshot } from "./Requirement.js";
 import { ArchitectureDecisionRecord, type AdrSnapshot } from "./ArchitectureDecisionRecord.js";
+import { Stakeholder, type StakeholderSnapshot } from "./Stakeholder.js";
 
 export interface ProjectSnapshot {
   schemaVersion: 1;
@@ -16,12 +17,14 @@ export interface ProjectSnapshot {
   requirements: readonly RequirementSnapshot[];
   workOrders: readonly WorkOrderSnapshot[];
   adrs: readonly AdrSnapshot[];
+  stakeholders: readonly StakeholderSnapshot[];
 }
 
 export class Project extends AggregateRoot<ProjectId> {
   private readonly requirements: Requirement[] = [];
   private readonly workOrders: WorkOrder[] = [];
   private readonly adrs: ArchitectureDecisionRecord[] = [];
+  private readonly stakeholders: Stakeholder[] = [];
 
   constructor(
     id: ProjectId,
@@ -43,17 +46,21 @@ export class Project extends AggregateRoot<ProjectId> {
     for (const requirement of snapshot.requirements) project.addRequirement(Requirement.rehydrate(requirement));
     for (const workOrder of snapshot.workOrders) project.workOrders.push(WorkOrder.rehydrate(workOrder));
     for (const adr of snapshot.adrs ?? []) project.adrs.push(ArchitectureDecisionRecord.rehydrate(adr));
+    for (const stakeholder of snapshot.stakeholders ?? []) project.stakeholders.push(Stakeholder.rehydrate(stakeholder));
     return project;
   }
 
   toSnapshot(): ProjectSnapshot {
     return { schemaVersion: 1, id: this.id.value, name: this.name,
       requirements: this.requirements.map((requirement) => requirement.toSnapshot()),
-      workOrders: this.workOrders.map((workOrder) => workOrder.toSnapshot()), adrs: this.adrs.map((adr) => adr.toSnapshot()) };
+      workOrders: this.workOrders.map((workOrder) => workOrder.toSnapshot()), adrs: this.adrs.map((adr) => adr.toSnapshot()),
+      stakeholders: this.stakeholders.map((stakeholder) => stakeholder.toSnapshot()) };
   }
 
   addAdr(adr: ArchitectureDecisionRecord): void { this.adrs.push(adr); }
   getAdrs(): ArchitectureDecisionRecord[] { return [...this.adrs]; }
+  addStakeholder(stakeholder: Stakeholder): void { this.stakeholders.push(stakeholder); }
+  getStakeholders(): Stakeholder[] { return [...this.stakeholders]; }
 
   addRequirement(requirement: Requirement): void {
     if (this.requirements.some((existing) => existing.id.equals(requirement.id))) {

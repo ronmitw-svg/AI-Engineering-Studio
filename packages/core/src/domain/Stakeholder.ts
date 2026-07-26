@@ -12,6 +12,16 @@ export interface CreateStakeholderInput {
   notes?: string;
 }
 
+export interface StakeholderSnapshot {
+  id: string;
+  name: string;
+  role: string;
+  interest: string;
+  influence: "Low" | "Medium" | "High";
+  requirementIds: readonly string[];
+  notes?: string;
+}
+
 export class Stakeholder extends Entity<StakeholderId> {
   public readonly requirementIds: readonly RequirementId[];
   public readonly notes?: string;
@@ -39,5 +49,14 @@ export class Stakeholder extends Entity<StakeholderId> {
       throw new ValidationError("A stakeholder needs a name, role, and interest.");
     }
     return new Stakeholder({ ...input, name, role, interest });
+  }
+
+  static rehydrate(snapshot: StakeholderSnapshot): Stakeholder {
+    return Stakeholder.create({ ...snapshot, id: new StakeholderId(snapshot.id), requirementIds: snapshot.requirementIds.map((id) => new RequirementId(id)) });
+  }
+
+  toSnapshot(): StakeholderSnapshot {
+    return { id: this.id.value, name: this.name, role: this.role, interest: this.interest, influence: this.influence,
+      requirementIds: this.requirementIds.map((id) => id.value), notes: this.notes };
   }
 }
