@@ -40,10 +40,17 @@ test("CLI persists a governed work-order workflow end to end", async () => {
       /approved by release-approver/,
     );
 
+    assert.match(
+      await run(workspace, "generate", "adr", "demo", "adr-1", "Use core", "--context", "Need boundaries", "--decision", "Use a core package", "--consequences", "Adapters depend on core", "--requirement", "req-1"),
+      /Created ADR/,
+    );
+    assert.match(await run(workspace, "adr", "accept", "demo", "adr-1"), /ADR adr-1 accepted/);
+    await assert.rejects(run(workspace, "adr", "accept", "demo", "adr-1"), /cannot transition from Accepted to Accepted/);
+
     assert.match(await run(workspace, "validate", "demo"), /valid/);
     assert.match(
       await run(workspace, "traceability", "demo"),
-      /req-1: work-orders=wo-1 adrs=NONE reviewed=wo-1 releases=release-1/,
+      /req-1: work-orders=wo-1 adrs=adr-1 reviewed=wo-1 releases=release-1/,
     );
     assert.match(
       await run(workspace, "list"),

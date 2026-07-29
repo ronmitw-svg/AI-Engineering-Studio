@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { AddReviewFinding, ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRelease, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, RejectReview, RequestReviewChanges, StartReview, StartWorkOrder, SubmitWorkOrderForReview } from "./ProjectUseCases.js";
+import { AcceptAdr, AddReviewFinding, ApproveReview, ApproveWorkOrder, CreateAdr, CreateProject, CreateRelease, CreateRequirement, CreateReview, CreateStakeholder, CreateWorkOrder, MarkWorkOrderReady, RejectAdr, RejectReview, RequestReviewChanges, StartReview, StartWorkOrder, SubmitWorkOrderForReview } from "./ProjectUseCases.js";
+import { AdrStatus } from "../domain/ArchitectureDecisionRecord.js";
 import { ReviewStatus } from "../domain/Review.js";
 import { AdrId, ProjectId, ReleaseId, RequirementId, ReviewId, StakeholderId, WorkOrderId } from "../value-objects/Ids.js";
+import { AdrNotFoundError } from "./AdrNotFoundError.js";
 import { ReleaseNotReadyError } from "./ReleaseNotReadyError.js";
+import { InvalidStateTransitionError } from "../errors/InvalidStateTransitionError.js";
 import { MissingRequirementError } from "../errors/MissingRequirementError.js";
 import type { Project } from "../domain/project.js";
 import type { ProjectRepository } from "../repositories/ProjectRepository.js";
@@ -151,6 +154,44 @@ test("ADR use case rejects references to requirements outside the project", asyn
     new CreateAdr(repository).execute({ projectId, id: new AdrId("adr-missing"), title: "Use core", context: "Rules need boundaries.",
       decision: "Use a core package.", consequences: "Adapters depend on core.", requirementIds: [new RequirementId("req-missing")] }),
     MissingRequirementError,
+  );
+});
+
+test("an ADR can be accepted, and cannot be accepted twice", async () => {
+  const repository = new InMemoryProjectRepository();
+  const projectId = new ProjectId("project-adr-accept");
+  await new CreateProject(repository).execute({ id: projectId, name: "ADR project" });
+  await new CreateRequirement(repository).execute({ projectId, id: new RequirementId("req-accept"), title: "Boundaries", description: "Enforce boundaries.",
+    type: RequirementType.Functional, priority: Priority.Medium, acceptanceCriteria: ["Core owns rules"], source: "Charter" });
+  await new CreateAdr(repository).execute({ projectId, id: new AdrId("adr-accept"), title: "Use core", context: "Rules need boundaries.",
+    decision: "Use a core package.", consequences: "Adapters depend on core.", requirementIds: [new RequirementId("req-accept")] });
+
+  await new AcceptAdr(repository).execute({ projectId, adrId: new AdrId("adr-accept") });
+  const adr = (await repository.findById(projectId))?.findAdr(new AdrId("adr-accept"));
+  assert.equal(adr?.statusValue(), AdrStatus.Accepted);
+
+  await assert.rejects(
+    new AcceptAdr(repository).execute({ projectId, adrId: new AdrId("adr-accept") }),
+    InvalidStateTransitionError,
+  );
+});
+
+test("an ADR can be rejected, and rejecting an unknown ADR fails clearly", async () => {
+  const repository = new InMemoryProjectRepository();
+  const projectId = new ProjectId("project-adr-reject");
+  await new CreateProject(repository).execute({ id: projectId, name: "ADR project" });
+  await new CreateRequirement(repository).execute({ projectId, id: new RequirementId("req-reject"), title: "Boundaries", description: "Enforce boundaries.",
+    type: RequirementType.Functional, priority: Priority.Medium, acceptanceCriteria: ["Core owns rules"], source: "Charter" });
+  await new CreateAdr(repository).execute({ projectId, id: new AdrId("adr-reject"), title: "Use core", context: "Rules need boundaries.",
+    decision: "Use a core package.", consequences: "Adapters depend on core.", requirementIds: [new RequirementId("req-reject")] });
+
+  await new RejectAdr(repository).execute({ projectId, adrId: new AdrId("adr-reject") });
+  const adr = (await repository.findById(projectId))?.findAdr(new AdrId("adr-reject"));
+  assert.equal(adr?.statusValue(), AdrStatus.Rejected);
+
+  await assert.rejects(
+    new RejectAdr(repository).execute({ projectId, adrId: new AdrId("adr-does-not-exist") }),
+    AdrNotFoundError,
   );
 });
 
