@@ -130,6 +130,24 @@ function ProjectDetailView({ detail }: { detail: ProjectDetail }) {
         </table>
       </Section>
 
+      <Section title="Architecture Decisions" empty={!project.adrs.length}>
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Title</th><th>Status</th><th>Requirements</th></tr>
+          </thead>
+          <tbody>
+            {project.adrs.map((adr) => (
+              <tr key={adr.id}>
+                <td>{adr.id}</td>
+                <td>{adr.title}</td>
+                <td>{adr.status}</td>
+                <td>{adr.requirementIds.join(', ')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Section>
+
       <Section title="Reviews" empty={!project.reviews.length}>
         <table>
           <thead>
