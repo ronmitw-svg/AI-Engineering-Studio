@@ -8,13 +8,15 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
-    "test": "pnpm build && node --test dist/**/*.test.js"
+    "test": "pnpm build && node --test dist/**/*.test.js",
+    "lint": "oxlint"
   },
   "dependencies": {
     "@aes/core": "workspace:*",
     "@anthropic-ai/sdk": "^0.115.0"
   },
   "devDependencies": {
-    "@types/node": "^24.13.2"
+    "@types/node": "^24.13.2",
+    "oxlint": "^1.71.0"
   }
 }

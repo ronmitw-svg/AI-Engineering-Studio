@@ -30,7 +30,7 @@ class StubAiProvider implements AiProvider {
 async function projectWithRequirement(repository: ProjectRepository): Promise<ProjectId> {
   const projectId = new ProjectId("project-adr-draft");
   const project = Project.create({ id: projectId, name: "AI drafting" });
-  project.addRequirement((await import("../domain/Requirement.js")).Requirement.create({
+  project.addRequirement(Requirement.create({
     id: new RequirementId("req-1"), title: "Governed persistence", description: "Persist projects safely.",
     type: RequirementType.Functional, priority: Priority.High, acceptanceCriteria: ["Data survives restart"], source: "Charter",
   }));
