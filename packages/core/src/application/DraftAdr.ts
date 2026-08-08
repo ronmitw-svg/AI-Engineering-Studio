@@ -27,6 +27,9 @@ const SYSTEM_PROMPT =
   "how they compare, then decide. Respond with a single JSON object with exactly " +
   "three string fields: context, decision, consequences. No markdown, no other text.";
 
+// Fixed proposer identity: no human reviewer name can collide with it, so acceptance always goes through the separation-of-duties check.
+export const AI_PROPOSER = "ai";
+
 export class DraftAdr {
   constructor(
     private readonly projects: ProjectRepository,
@@ -57,6 +60,7 @@ export class DraftAdr {
       decision: draft.decision,
       consequences: draft.consequences,
       requirementIds: input.requirementIds,
+      proposedBy: AI_PROPOSER,
     });
     await this.projects.save(project);
     return adr;

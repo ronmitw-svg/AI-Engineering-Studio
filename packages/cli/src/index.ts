@@ -144,21 +144,29 @@ generate
   .requiredOption("--decision <decision>", "Decision")
   .requiredOption("--consequences <consequences>", "Consequences")
   .requiredOption("--requirement <id...>", "Requirement IDs this decision addresses")
+  .requiredOption("--proposed-by <name>", "Who is proposing this ADR")
   .option("--workspace <path>", "Workspace root", process.cwd())
-  .action(async (projectId: string, adrId: string, title: string, options: { context: string; decision: string; consequences: string; requirement: string[]; workspace: string }) => {
+  .action(async (projectId: string, adrId: string, title: string, options: { context: string; decision: string; consequences: string; requirement: string[]; proposedBy: string; workspace: string }) => {
     await new CreateAdr(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), id: new AdrId(adrId), title,
-      context: options.context, decision: options.decision, consequences: options.consequences, requirementIds: options.requirement.map((id) => new RequirementId(id)) });
+      context: options.context, decision: options.decision, consequences: options.consequences, requirementIds: options.requirement.map((id) => new RequirementId(id)),
+      proposedBy: options.proposedBy });
     console.log(`Created ADR ${adrId}.`);
   });
 
 const adr = program.command("adr").description("Record a project's human decision on a proposed ADR");
-for (const [name, UseCase] of [["accept", AcceptAdr], ["reject", RejectAdr]] as const) {
-  adr.command(`${name} <projectId> <adrId>`).option("--workspace <path>", "Workspace root", process.cwd())
-    .action(async (projectId: string, adrId: string, options: { workspace: string }) => {
-      await new UseCase(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), adrId: new AdrId(adrId) });
-      console.log(`ADR ${adrId} ${name}ed.`);
-    });
-}
+adr.command("accept <projectId> <adrId>")
+  .requiredOption("--accepted-by <name>", "Who is accepting this ADR (must differ from who proposed it)")
+  .option("--workspace <path>", "Workspace root", process.cwd())
+  .action(async (projectId: string, adrId: string, options: { acceptedBy: string; workspace: string }) => {
+    await new AcceptAdr(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), adrId: new AdrId(adrId), acceptedBy: options.acceptedBy });
+    console.log(`ADR ${adrId} accepted by ${options.acceptedBy}.`);
+  });
+adr.command("reject <projectId> <adrId>")
+  .option("--workspace <path>", "Workspace root", process.cwd())
+  .action(async (projectId: string, adrId: string, options: { workspace: string }) => {
+    await new RejectAdr(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), adrId: new AdrId(adrId) });
+    console.log(`ADR ${adrId} rejected.`);
+  });
 
 const ai = program.command("ai").description("AI-assisted drafting of governed artefacts (always lands as Proposed, pending human approval)");
 ai.command("draft-adr <projectId> <adrId> <title>")

@@ -160,7 +160,7 @@ test("ADR use case persists an architectural decision linked to its requirement"
   await new CreateRequirement(repository).execute({ projectId, id: new RequirementId("req-adr"), title: "Boundaries", description: "Enforce boundaries.",
     type: RequirementType.Functional, priority: Priority.Medium, acceptanceCriteria: ["Core owns rules"], source: "Charter" });
   await new CreateAdr(repository).execute({ projectId, id: new AdrId("adr-1"), title: "Use core", context: "Rules need boundaries.",
-    decision: "Use a core package.", consequences: "Adapters depend on core.", requirementIds: [new RequirementId("req-adr")] });
+    decision: "Use a core package.", consequences: "Adapters depend on core.", requirementIds: [new RequirementId("req-adr")], proposedBy: "architect" });
   const adr = (await repository.findById(projectId))?.getAdrs()[0];
   assert.equal(adr?.requirementIds[0]?.value, "req-adr");
 });
@@ -171,7 +171,7 @@ test("ADR use case rejects references to requirements outside the project", asyn
   await new CreateProject(repository).execute({ id: projectId, name: "ADR project" });
   await assert.rejects(
     new CreateAdr(repository).execute({ projectId, id: new AdrId("adr-missing"), title: "Use core", context: "Rules need boundaries.",
-      decision: "Use a core package.", consequences: "Adapters depend on core.", requirementIds: [new RequirementId("req-missing")] }),
+      decision: "Use a core package.", consequences: "Adapters depend on core.", requirementIds: [new RequirementId("req-missing")], proposedBy: "architect" }),
     MissingRequirementError,
   );
 });
@@ -183,15 +183,30 @@ test("an ADR can be accepted, and cannot be accepted twice", async () => {
   await new CreateRequirement(repository).execute({ projectId, id: new RequirementId("req-accept"), title: "Boundaries", description: "Enforce boundaries.",
     type: RequirementType.Functional, priority: Priority.Medium, acceptanceCriteria: ["Core owns rules"], source: "Charter" });
   await new CreateAdr(repository).execute({ projectId, id: new AdrId("adr-accept"), title: "Use core", context: "Rules need boundaries.",
-    decision: "Use a core package.", consequences: "Adapters depend on core.", requirementIds: [new RequirementId("req-accept")] });
+    decision: "Use a core package.", consequences: "Adapters depend on core.", requirementIds: [new RequirementId("req-accept")], proposedBy: "architect" });
 
-  await new AcceptAdr(repository).execute({ projectId, adrId: new AdrId("adr-accept") });
+  await new AcceptAdr(repository).execute({ projectId, adrId: new AdrId("adr-accept"), acceptedBy: "reviewer" });
   const adr = (await repository.findById(projectId))?.findAdr(new AdrId("adr-accept"));
   assert.equal(adr?.statusValue(), AdrStatus.Accepted);
 
   await assert.rejects(
-    new AcceptAdr(repository).execute({ projectId, adrId: new AdrId("adr-accept") }),
+    new AcceptAdr(repository).execute({ projectId, adrId: new AdrId("adr-accept"), acceptedBy: "reviewer" }),
     InvalidStateTransitionError,
+  );
+});
+
+test("an ADR cannot be accepted by whoever proposed it", async () => {
+  const repository = new InMemoryProjectRepository();
+  const projectId = new ProjectId("project-adr-conflict");
+  await new CreateProject(repository).execute({ id: projectId, name: "ADR project" });
+  await new CreateRequirement(repository).execute({ projectId, id: new RequirementId("req-conflict"), title: "Boundaries", description: "Enforce boundaries.",
+    type: RequirementType.Functional, priority: Priority.Medium, acceptanceCriteria: ["Core owns rules"], source: "Charter" });
+  await new CreateAdr(repository).execute({ projectId, id: new AdrId("adr-conflict"), title: "Use core", context: "Rules need boundaries.",
+    decision: "Use a core package.", consequences: "Adapters depend on core.", requirementIds: [new RequirementId("req-conflict")], proposedBy: "architect" });
+
+  await assert.rejects(
+    new AcceptAdr(repository).execute({ projectId, adrId: new AdrId("adr-conflict"), acceptedBy: "architect" }),
+    SeparationOfDutiesError,
   );
 });
 
@@ -202,7 +217,7 @@ test("an ADR can be rejected, and rejecting an unknown ADR fails clearly", async
   await new CreateRequirement(repository).execute({ projectId, id: new RequirementId("req-reject"), title: "Boundaries", description: "Enforce boundaries.",
     type: RequirementType.Functional, priority: Priority.Medium, acceptanceCriteria: ["Core owns rules"], source: "Charter" });
   await new CreateAdr(repository).execute({ projectId, id: new AdrId("adr-reject"), title: "Use core", context: "Rules need boundaries.",
-    decision: "Use a core package.", consequences: "Adapters depend on core.", requirementIds: [new RequirementId("req-reject")] });
+    decision: "Use a core package.", consequences: "Adapters depend on core.", requirementIds: [new RequirementId("req-reject")], proposedBy: "architect" });
 
   await new RejectAdr(repository).execute({ projectId, adrId: new AdrId("adr-reject") });
   const adr = (await repository.findById(projectId))?.findAdr(new AdrId("adr-reject"));
@@ -237,7 +252,7 @@ test("traceability analysis reports the full ADR/review/release chain", async ()
   assert.deepEqual(beforeAdrAndReview.requirementsMissingAdr, ["req-chain"]);
 
   await new CreateAdr(repository).execute({ projectId, id: new AdrId("adr-chain"), title: "Use core", context: "Rules need boundaries.",
-    decision: "Use a core package.", consequences: "Adapters depend on core.", requirementIds: [new RequirementId("req-chain")] });
+    decision: "Use a core package.", consequences: "Adapters depend on core.", requirementIds: [new RequirementId("req-chain")], proposedBy: "architect" });
   await new CreateWorkOrder(repository).execute({ projectId, id: new WorkOrderId("wo-chain"), title: "Implement", description: "Implement chain.", requirementIds: [new RequirementId("req-chain")] });
 
   const beforeReview = await new AnalyzeProjectTraceability(repository).execute(projectId);

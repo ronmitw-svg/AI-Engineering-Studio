@@ -139,9 +139,9 @@ export class RejectRelease {
 
 export class AcceptAdr {
   constructor(private readonly projects: ProjectRepository) {}
-  async execute(input: { projectId: ProjectId; adrId: AdrId }): Promise<void> {
+  async execute(input: { projectId: ProjectId; adrId: AdrId; acceptedBy: string }): Promise<void> {
     const { project, adr } = await findAdr(this.projects, input);
-    adr.accept();
+    adr.accept(input.acceptedBy);
     await this.projects.save(project);
   }
 }

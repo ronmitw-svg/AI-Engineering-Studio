@@ -1,4 +1,5 @@
 import { InvalidStateTransitionError } from "../errors/InvalidStateTransitionError.js";
+import { SeparationOfDutiesError } from "../errors/SeparationOfDutiesError.js";
 import { ValidationError } from "../errors/ValidationError.js";
 import { AdrId, RequirementId } from "../value-objects/Ids.js";
 import { AggregateRoot } from "./AggregateRoot.js";
@@ -18,6 +19,7 @@ export interface CreateAdrInput {
   decision: string;
   consequences: string;
   requirementIds: readonly RequirementId[];
+  proposedBy: string;
   createdAt?: Date;
 }
 
@@ -25,9 +27,10 @@ export interface AdrSnapshot {
   id: string;
   title: string;
   context: string;
-  decision: string;
   consequences: string;
+  decision: string;
   requirementIds: readonly string[];
+  proposedBy: string;
   status: AdrStatus;
   createdAt: string;
   supersededBy?: string;
@@ -45,6 +48,7 @@ export class ArchitectureDecisionRecord extends AggregateRoot<AdrId> {
     public readonly decision: string,
     public readonly consequences: string,
     public readonly requirementIds: readonly RequirementId[],
+    public readonly proposedBy: string,
     createdAt: Date,
   ) {
     super(id);
@@ -59,13 +63,17 @@ export class ArchitectureDecisionRecord extends AggregateRoot<AdrId> {
     if (!input.requirementIds.length) {
       throw new ValidationError("An ADR must reference at least one requirement.");
     }
-    return new ArchitectureDecisionRecord(input.id, fields[0], fields[1], fields[2], fields[3], input.requirementIds, input.createdAt ?? new Date());
+    const proposedBy = input.proposedBy.trim();
+    if (!proposedBy) {
+      throw new ValidationError("An ADR needs to record who proposed it.");
+    }
+    return new ArchitectureDecisionRecord(input.id, fields[0], fields[1], fields[2], fields[3], input.requirementIds, proposedBy, input.createdAt ?? new Date());
   }
 
   static rehydrate(snapshot: AdrSnapshot): ArchitectureDecisionRecord {
     const adr = ArchitectureDecisionRecord.create({ id: new AdrId(snapshot.id), title: snapshot.title, context: snapshot.context,
       decision: snapshot.decision, consequences: snapshot.consequences, requirementIds: snapshot.requirementIds.map((id) => new RequirementId(id)),
-      createdAt: new Date(snapshot.createdAt) });
+      proposedBy: snapshot.proposedBy, createdAt: new Date(snapshot.createdAt) });
     adr.status = snapshot.status;
     adr.supersededBy = snapshot.supersededBy ? new AdrId(snapshot.supersededBy) : undefined;
     return adr;
@@ -73,10 +81,14 @@ export class ArchitectureDecisionRecord extends AggregateRoot<AdrId> {
 
   toSnapshot(): AdrSnapshot {
     return { id: this.id.value, title: this.title, context: this.context, decision: this.decision, consequences: this.consequences,
-      requirementIds: this.requirementIds.map(String), status: this.status, createdAt: this.createdAt.toISOString(), supersededBy: this.supersededBy?.value };
+      requirementIds: this.requirementIds.map(String), proposedBy: this.proposedBy, status: this.status,
+      createdAt: this.createdAt.toISOString(), supersededBy: this.supersededBy?.value };
   }
 
-  accept(): void {
+  accept(acceptedBy: string): void {
+    const actor = acceptedBy.trim();
+    if (!actor) throw new ValidationError("Accepting an ADR needs an acceptor.");
+    if (actor === this.proposedBy) throw new SeparationOfDutiesError(actor, "accept");
     this.transition(AdrStatus.Proposed, AdrStatus.Accepted);
   }
 

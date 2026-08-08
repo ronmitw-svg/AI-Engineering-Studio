@@ -13,7 +13,7 @@ const project: ProjectSnapshot = {
   requirements: [{ id: 'req-1', title: 'Traceability', description: 'Track work.', type: RequirementType.Functional, priority: Priority.Medium,
     acceptanceCriteria: ['Traced'], source: 'Charter', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z', status: RequirementStatus.Draft }],
   workOrders: [],
-  adrs: [{ id: 'adr-1', title: 'Use core', context: 'c', decision: 'd', consequences: 'e', requirementIds: ['req-1'], status: AdrStatus.Proposed, createdAt: '2026-01-01T00:00:00.000Z' }],
+  adrs: [{ id: 'adr-1', title: 'Use core', context: 'c', decision: 'd', consequences: 'e', requirementIds: ['req-1'], proposedBy: 'architect', status: AdrStatus.Proposed, createdAt: '2026-01-01T00:00:00.000Z' }],
   stakeholders: [], reviews: [], releases: [],
 }
 

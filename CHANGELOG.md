@@ -23,6 +23,10 @@ under Unreleased.
   the requirement(s) it addresses; `AnalyzeProjectTraceability` reports
   the full Requirement → ADR → WorkOrder → Review → Release chain,
   including unlinked requirements and missing ADR/review coverage.
+- **Governed ADRs**: every ADR records who proposed it and starts
+  `Proposed`; `accept`/`reject` require a human decision, and the
+  proposer cannot accept their own ADR (the same rule now applies
+  consistently to ADRs, work-order reviews, and releases).
 - **Governed releases**: `CreateRelease` only succeeds once every
   requirement is linked to a completed work order; every release records
   which requirements it includes, starts as `Draft`, and requires human
@@ -83,6 +87,3 @@ under Unreleased.
   `docs/traceability/RTM-0001.md` are still empty placeholders — a real
   Discovery Interview and Stakeholder Analysis (CSDS Chapters 5–6) have
   not been performed for this project itself.
-- The `AiProvider` self-approval-style separation-of-duties check exists
-  for releases and reviews, but not yet for who is allowed to accept an
-  AI-drafted ADR versus who proposed it.
