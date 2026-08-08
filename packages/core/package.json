@@ -7,6 +7,12 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "pnpm build && node --test dist/**/*.test.js",
+    "lint": "oxlint"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.2",
+    "oxlint": "^1.71.0"
   }
 }

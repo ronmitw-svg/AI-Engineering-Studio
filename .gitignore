@@ -1,4 +1,6 @@
 node_modules
+.turbo
+.pnpm-store
 dist
 build
 coverage
@@ -9,3 +11,4 @@ coverage
 temp
 package-lock.json
 *.save
+*.tsbuildinfo

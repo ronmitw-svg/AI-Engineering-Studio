@@ -4,5 +4,6 @@ export enum WorkOrderStatus {
   InProgress = "InProgress",
   Review = "Review",
   Completed = "Completed",
-  Cancelled = "Cancelled"
+  Cancelled = "Cancelled",
+  Blocked = "Blocked",
 }
