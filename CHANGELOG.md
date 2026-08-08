@@ -43,7 +43,8 @@ under Unreleased.
 - **Studio dashboard** (`apps/studio`): a local Vite dev-server API
   (`/api/projects`, `/api/projects/:id`) backed by the same use cases the
   CLI uses, and a UI showing requirements, work orders, ADRs, reviews,
-  releases, and traceability findings per project.
+  releases, and traceability findings per project — covered by vitest +
+  Testing Library component tests, in addition to the API's own tests.
 - **CI**: `.github/workflows/ci.yml` runs install/typecheck/lint/test
   /build on every push and PR; `release.yml` runs the same gate on
   version tags and manual dispatch.
@@ -82,5 +83,6 @@ under Unreleased.
   `docs/traceability/RTM-0001.md` are still empty placeholders — a real
   Discovery Interview and Stakeholder Analysis (CSDS Chapters 5–6) have
   not been performed for this project itself.
-- No test suite exists for `apps/studio/src` (the React UI); only its
-  server-side API middleware is tested.
+- The `AiProvider` self-approval-style separation-of-duties check exists
+  for releases and reviews, but not yet for who is allowed to accept an
+  AI-drafted ADR versus who proposed it.
