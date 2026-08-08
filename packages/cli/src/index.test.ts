@@ -19,10 +19,14 @@ test("CLI persists a governed work-order workflow end to end", async () => {
   try {
     await run(workspace, "init", "demo", "Demo project");
     await run(workspace, "generate", "requirement", "demo", "req-1", "Traceability", "Track delivery", "--source", "Charter");
-    await run(workspace, "generate", "work-order", "demo", "wo-1", "Implement traceability", "Connect artefacts", "--requirement", "req-1");
+    await run(workspace, "generate", "work-order", "demo", "wo-1", "Implement traceability", "Connect artefacts", "--requirement", "req-1", "--assigned-agent", "implementer-agent");
     await run(workspace, "work-order", "ready", "demo", "wo-1");
     await run(workspace, "work-order", "start", "demo", "wo-1");
     await run(workspace, "work-order", "submit", "demo", "wo-1");
+    await assert.rejects(
+      run(workspace, "generate", "review", "demo", "review-conflict", "wo-1", "--reviewer", "implementer-agent"),
+      /cannot review their own work/,
+    );
     await run(workspace, "generate", "review", "demo", "review-1", "wo-1", "--reviewer", "qa");
     await run(workspace, "review", "start", "demo", "review-1");
     await run(workspace, "review", "approve", "demo", "review-1");

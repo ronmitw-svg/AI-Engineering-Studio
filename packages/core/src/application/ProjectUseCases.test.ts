@@ -8,6 +8,7 @@ import { AdrNotFoundError } from "./AdrNotFoundError.js";
 import { ReleaseNotReadyError } from "./ReleaseNotReadyError.js";
 import { InvalidStateTransitionError } from "../errors/InvalidStateTransitionError.js";
 import { MissingRequirementError } from "../errors/MissingRequirementError.js";
+import { SeparationOfDutiesError } from "../errors/SeparationOfDutiesError.js";
 import type { Project } from "../domain/project.js";
 import type { ProjectRepository } from "../repositories/ProjectRepository.js";
 import { Priority } from "../value-objects/Priority.js";
@@ -94,6 +95,24 @@ test("review use case links an independent reviewer to a work order", async () =
   await new CreateWorkOrder(repository).execute({ projectId, id: new WorkOrderId("wo-review"), title: "Implement", description: "Implement review.", requirementIds: [new RequirementId("req-review")] });
   await new CreateReview(repository).execute({ projectId, id: new ReviewId("review-1"), target: new WorkOrderId("wo-review"), reviewer: "review-agent" });
   assert.equal((await repository.findById(projectId))?.getReviews()[0]?.reviewer, "review-agent");
+});
+
+test("a work order's implementer cannot review their own work", async () => {
+  const repository = new InMemoryProjectRepository();
+  const projectId = new ProjectId("project-review-conflict");
+  await new CreateProject(repository).execute({ id: projectId, name: "Review conflict" });
+  await new CreateRequirement(repository).execute({ projectId, id: new RequirementId("req-conflict"), title: "Review", description: "Review work.",
+    type: RequirementType.Functional, priority: Priority.Medium, acceptanceCriteria: ["Review exists"], source: "Charter" });
+  await new CreateWorkOrder(repository).execute({ projectId, id: new WorkOrderId("wo-conflict"), title: "Implement", description: "Implement review.",
+    requirementIds: [new RequirementId("req-conflict")], assignedAgent: "implementer-agent" });
+
+  await assert.rejects(
+    new CreateReview(repository).execute({ projectId, id: new ReviewId("review-conflict"), target: new WorkOrderId("wo-conflict"), reviewer: "implementer-agent" }),
+    SeparationOfDutiesError,
+  );
+
+  const review = await new CreateReview(repository).execute({ projectId, id: new ReviewId("review-independent"), target: new WorkOrderId("wo-conflict"), reviewer: "review-agent" });
+  assert.equal(review.reviewer, "review-agent");
 });
 
 test("review use cases persist findings and requested changes", async () => {

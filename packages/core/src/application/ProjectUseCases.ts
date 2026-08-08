@@ -4,6 +4,7 @@ import { type CreateWorkOrderInput, WorkOrder } from "../domain/WorkOrder.js";
 import { ProjectRepository } from "../repositories/ProjectRepository.js";
 import { AdrId, ProjectId, ReleaseId, ReviewId, WorkOrderId } from "../value-objects/Ids.js";
 import { AdrNotFoundError } from "./AdrNotFoundError.js";
+import { SeparationOfDutiesError } from "../errors/SeparationOfDutiesError.js";
 import { ProjectNotFoundError } from "./ProjectNotFoundError.js";
 import { ArchitectureDecisionRecord, type CreateAdrInput } from "../domain/ArchitectureDecisionRecord.js";
 import { Stakeholder, type CreateStakeholderInput } from "../domain/Stakeholder.js";
@@ -90,7 +91,11 @@ export class CreateReview {
   async execute(input: { projectId: ProjectId; id: ReviewId; target: WorkOrderId; reviewer: string }): Promise<Review> {
     const project = await this.projects.findById(input.projectId);
     if (!project) throw new ProjectNotFoundError(input.projectId.toString());
-    if (!project.findWorkOrder(input.target)) throw new WorkOrderNotFoundError(input.target.toString());
+    const workOrder = project.findWorkOrder(input.target);
+    if (!workOrder) throw new WorkOrderNotFoundError(input.target.toString());
+    if (workOrder.assignedAgent && workOrder.assignedAgent === input.reviewer.trim()) {
+      throw new SeparationOfDutiesError(input.reviewer.trim(), "review");
+    }
     const review = Review.create(input);
     project.addReview(review);
     await this.projects.save(project);

@@ -129,10 +129,11 @@ generate
   .command("work-order <projectId> <workOrderId> <title> <description>")
   .description("Create a work order for one or more requirements")
   .requiredOption("--requirement <id...>", "Requirement IDs")
+  .option("--assigned-agent <agent>", "Who is implementing this work order (blocks them from also reviewing it)")
   .option("--workspace <path>", "Workspace root", process.cwd())
-  .action(async (projectId: string, workOrderId: string, title: string, description: string, options: { requirement: string[]; workspace: string }) => {
+  .action(async (projectId: string, workOrderId: string, title: string, description: string, options: { requirement: string[]; assignedAgent?: string; workspace: string }) => {
     await new CreateWorkOrder(repository(options.workspace)).execute({ projectId: new ProjectId(projectId), id: new WorkOrderId(workOrderId), title, description,
-      requirementIds: options.requirement.map((id) => new RequirementId(id)) });
+      requirementIds: options.requirement.map((id) => new RequirementId(id)), assignedAgent: options.assignedAgent });
     console.log(`Created work order ${workOrderId}.`);
   });
 
