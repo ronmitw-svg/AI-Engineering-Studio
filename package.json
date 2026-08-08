@@ -1,7 +1,7 @@
 {
   "name": "ai-engineering-studio",
-  "version": "1.0.0",
-  "description": "Status: Bootstrap",
+  "version": "0.1.0",
+  "description": "A governed, AI-native engineering workspace for requirements, work orders, reviews, decisions, and traceability.",
   "main": "index.js",
   "directories": {
     "doc": "docs",
